@@ -18,7 +18,7 @@ typedef py::array_t<int, py::array::c_style | py::array::forcecast> int_array;
 class IoUtilsBind {
  public:
   IoUtilsBind() {}
-  LoadGensimVocab(std::string filepath, int min_count) {
+  void LoadGensimVocab(std::string filepath, int min_count) {
     obj_.LoadGensimVocab(filepath, min_count);
   }
  private:
@@ -30,7 +30,8 @@ PYBIND11_PLUGIN(ioutils_bind) {
 
   py::class_<IoUtilsBind>(m, "IoUtilsBind")
   .def(py::init())
-  .def("load_gensim_vocab", &IoUtilsBind::Init, py::arg("filepath"), py::arg("min_count"))
+  .def("load_gensim_vocab", &IoUtilsBind::LoadGensimVocab,
+      py::arg("filepath"), py::arg("min_count"))
   .def("__repr__",
   [](const IoUtilsBind &a) {
     return "<IoUtilsBind>";
