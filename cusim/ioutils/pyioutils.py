@@ -11,8 +11,8 @@ from cusim.ioutils.ioutils_bind import IoUtilsBind
 
 class IoUtils:
   def __init__(self, log_level=2):
-    self.logger = aux.get_logger("ioutils", log_level=log_level)
-    self.obj = IoUtilsBind(log_level)
+    self.logger = aux.get_logger("ioutils", level=log_level)
+    self.obj = IoUtilsBind()
 
   def load_gensim_vocab(self, filepath, min_count):
     self.obj.load_gensim_vocab(filepath, min_count)

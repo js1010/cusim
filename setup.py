@@ -166,7 +166,7 @@ def setup_package():
     download_url="https://github.com/js1010/cusim/releases",
     include_package_data=False,
     license='Apac2',
-    packages=['cusim/'],
+    packages=['cusim/', "cusim/ioutils/"],
     cmdclass=cmdclass,
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     platforms=['Linux', 'Mac OSX', 'Unix'],

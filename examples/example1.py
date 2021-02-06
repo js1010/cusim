@@ -6,14 +6,15 @@
 
 # pylint: disable=no-name-in-module,logging-format-truncated
 import fire
-from cusim import aux
-from cusim.ioutils import IoUtils
+from cusim import aux, IoUtils
 
 LOGGER = aux.get_logger()
+CORPORA_PATH = "res/corpora.txt"
+MIN_COUNT = 5
 
 def run():
   iou = IoUtils()
-  iou.load_gensim_vocab("corpora.txt", 5)
+  iou.load_gensim_vocab(CORPORA_PATH, MIN_COUNT)
 
 
 if __name__ == "__main__":
