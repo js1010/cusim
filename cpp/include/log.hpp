@@ -39,6 +39,6 @@ class CuSimLogger {
  private:
   static int global_logging_level_;
   std::shared_ptr<spdlog::logger> logger_;
-};  // class CuHNSWLogger
+};  // class CuSimLogger
 
 }  // namespace cusim

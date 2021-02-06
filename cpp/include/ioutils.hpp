@@ -20,6 +20,10 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "json11.hpp"
+#include "log.hpp"
+#include "types.hpp"
+
 namespace cusim {
 
 class IoUtils {
@@ -29,6 +33,8 @@ class IoUtils {
   void LoadGensimVocab(std::string filepath, int min_count);
  private:
   std::vector<std::string> parse_line(std::string line);
+
+  std::shared_ptr<spdlog::logger> logger_;
   std::unordered_map<std::string, int> word_idmap_;
   std::vector<std::string> word_list_;
 };  // class IoUtils

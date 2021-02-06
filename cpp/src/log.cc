@@ -11,12 +11,12 @@
 namespace cusim {
 int CuSimLogger::global_logging_level_ = 2;
 
-CuSimLogger::CuHNSWLogger() {
+CuSimLogger::CuSimLogger() {
   spdlog::set_pattern("[%^%-8l%$] %Y-%m-%d %H:%M:%S %v");
   logger_ = spdlog::default_logger();
 }
 
-std::shared_ptr<spdlog::logger>& CuHNSWLogger::get_logger() {
+std::shared_ptr<spdlog::logger>& CuSimLogger::get_logger() {
   return logger_;
 }
 

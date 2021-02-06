@@ -49,7 +49,7 @@ void IoUtils::LoadGensimVocab(std::string filepath, int min_count) {
   word_list_.clear();
   for (auto& it: word_count) {
     if (it.second >= min_count) {
-      word_idmap_[it.first] = vocab_.size();
+      word_idmap_[it.first] = word_idmap_.size();
       word_list_.push_back(it.first);
     }
   }
