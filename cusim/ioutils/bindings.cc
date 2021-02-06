@@ -18,9 +18,23 @@ typedef py::array_t<int, py::array::c_style | py::array::forcecast> int_array;
 class IoUtilsBind {
  public:
   IoUtilsBind() {}
-  void LoadGensimVocab(std::string filepath, int min_count) {
-    obj_.LoadGensimVocab(filepath, min_count);
+
+  bool Init(std::string opt_path) {
+    return obj_.Init(opt_path);
   }
+
+  int LoadStreamFile(std::string filepath) {
+    return obj_.LoadStreamFile(filepath);
+  }
+
+  int ReadStreamForVocab(int num_lines) {
+    return obj_.ReadStreamForVocab(num_lines);
+  }
+
+  void GetWordVocab(int min_count) {
+    return obj_.GetWordVocab(min_count);
+  }
+
  private:
   cusim::IoUtils obj_;
 };
@@ -30,8 +44,10 @@ PYBIND11_PLUGIN(ioutils_bind) {
 
   py::class_<IoUtilsBind>(m, "IoUtilsBind")
   .def(py::init())
-  .def("load_gensim_vocab", &IoUtilsBind::LoadGensimVocab,
-      py::arg("filepath"), py::arg("min_count"))
+  .def("init", &IoUtilsBind::Init, py::arg("opt_path"))
+  .def("load_stream_file", &IoUtilsBind::LoadStreamFile, py::arg("filepath"))
+  .def("read_stream_for_vocab", &IoUtilsBind::ReadStreamForVocab, py::arg("num_lines"))
+  .def("get_word_vocab", &IoUtilsBind::GetWordVocab, py::arg("min_count"))
   .def("__repr__",
   [](const IoUtilsBind &a) {
     return "<IoUtilsBind>";

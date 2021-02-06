@@ -10,7 +10,6 @@ import logging.handlers
 
 import jsmin
 from google.protobuf.json_format import Parse, MessageToDict
-from cusim.config_pb2 import ConfigProto
 
 # get_logger and Option refer to
 # https://github.com/kakao/buffalo/blob/
@@ -57,7 +56,8 @@ def load_json_file(fname):
   return ret
 
 # use protobuf to restrict field and types
-def get_opt_as_proto(raw, proto_type=ConfigProto):
+def get_opt_as_proto(raw, proto_type=None):
+  assert proto_type is not None
   proto = proto_type()
   # convert raw to proto
   Parse(json.dumps(Option(raw)), proto)

@@ -30,12 +30,17 @@ class IoUtils {
  public:
   IoUtils();
   ~IoUtils();
-  void LoadGensimVocab(std::string filepath, int min_count);
+  bool Init(std::string opt_path);
+  int LoadStreamFile(std::string filepath);
+  int ReadStreamForVocab(int num_lines);
+  void GetWordVocab(int min_count);
  private:
-  std::vector<std::string> parse_line(std::string line);
+  void ParseLine(std::string line, std::vector<std::string>& line_vec);
 
+  std::ifstream stream_fin_;
+  json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
-  std::unordered_map<std::string, int> word_idmap_;
+  std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
 };  // class IoUtils
 

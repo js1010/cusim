@@ -13,9 +13,23 @@ IoUtils::IoUtils() {
 
 IoUtils::~IoUtils() {}
 
-std::vector<std::string> IoUtils::parse_line(std::string line) {
+bool IoUtils::Init(std::string opt_path) {
+  std::ifstream in(opt_path.c_str());
+  if (not in.is_open()) return false;
+
+  std::string str((std::istreambuf_iterator<char>(in)),
+      std::istreambuf_iterator<char>());
+  std::string err_cmt;
+  auto _opt = json11::Json::parse(str, err_cmt);
+  if (not err_cmt.empty()) return false;
+  opt_ = _opt;
+  CuSimLogger().set_log_level(opt_["c_log_level"].int_value());
+  return true;
+}
+
+void IoUtils::ParseLine(std::string line, std::vector<std::string>& ret) {
+  ret.clear();
   int n = line.size();
-  std::vector<std::string> ret;
   std::string element;
   for (int i = 0; i < n; ++i) {
     if (line[i] == ' ') {
@@ -28,26 +42,42 @@ std::vector<std::string> IoUtils::parse_line(std::string line) {
   if (element.size() > 0) {
     ret.push_back(element);
   }
-  return ret;
 }
 
-void IoUtils::LoadGensimVocab(std::string filepath, int min_count) {
-  INFO("read gensim file to generate vocabulary: {}, min_count: {}", filepath, min_count);
-  std::ifstream fin(filepath.c_str());
-  std::unordered_map<std::string, int> word_count;
-  while (not fin.eof()) {
-    std::string line;
-    getline(fin, line);
-    std::vector<std::string> line_vec = parse_line(line);
-    for (auto& word: line_vec) {
-      if (not word_count.count(word)) word_count[word] = 0;
-      word_count[word]++;
-    }
-  }
-  INFO("number of raw words: {}", word_count.size());
+int IoUtils::LoadStreamFile(std::string filepath) {
+  INFO("read gensim file to generate vocabulary: {}", filepath);
+  stream_fin_.open(filepath.c_str());
+  int count = 0;
+  std::string line;
+  while (getline(stream_fin_, line))
+    count++;
+  stream_fin_.close();
+  stream_fin_.open(filepath.c_str());
   word_idmap_.clear();
   word_list_.clear();
-  for (auto& it: word_count) {
+  word_count_.clear();
+  return count;
+}
+
+int IoUtils::ReadStreamForVocab(int num_lines) {
+  int read_cnt = 0;
+  std::string line;
+  std::vector<std::string> line_vec;
+  while (getline(stream_fin_, line) and read_cnt < num_lines) {
+    ParseLine(line, line_vec);
+    for (auto& word: line_vec) {
+      if (not word_count_.count(word)) word_count_[word] = 0;
+      word_count_[word]++;
+    }
+    read_cnt++;
+  }
+  if (read_cnt < num_lines) stream_fin_.close();
+  return read_cnt;
+}
+
+void IoUtils::GetWordVocab(int min_count) {
+  INFO("number of raw words: {}", word_count_.size());
+  for (auto& it: word_count_) {
     if (it.second >= min_count) {
       word_idmap_[it.first] = word_idmap_.size();
       word_list_.push_back(it.first);
