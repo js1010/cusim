@@ -59,11 +59,12 @@ int IoUtils::LoadStreamFile(std::string filepath) {
   return count;
 }
 
-int IoUtils::ReadStreamForVocab(int num_lines) {
+std::pair<int, bool> IoUtils::ReadStreamForVocab(int num_lines) {
   int read_cnt = 0;
   std::string line;
   std::vector<std::string> line_vec;
-  while (getline(stream_fin_, line) and read_cnt < num_lines) {
+  while (not stream_fin_.eof() and read_cnt < num_lines) {
+    getline(stream_fin_, line);
     ParseLine(line, line_vec);
     for (auto& word: line_vec) {
       if (not word_count_.count(word)) word_count_[word] = 0;
@@ -71,8 +72,12 @@ int IoUtils::ReadStreamForVocab(int num_lines) {
     }
     read_cnt++;
   }
-  if (read_cnt < num_lines) stream_fin_.close();
-  return read_cnt;
+  bool finished = false;
+  if (stream_fin_.eof()) {
+    stream_fin_.close();
+    finished = true;
+  }
+  return {read_cnt, finished};
 }
 
 void IoUtils::GetWordVocab(int min_count) {

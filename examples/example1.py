@@ -33,7 +33,7 @@ def download():
 def run():
   download()
   iou = IoUtils()
-  iou.load_stream_vocab(DATA_PATH, 5)
+  iou.load_stream_vocab(DATA_PATH, 5, 10000)
 
 
 if __name__ == "__main__":

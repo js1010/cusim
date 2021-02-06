@@ -27,7 +27,7 @@ class IoUtilsBind {
     return obj_.LoadStreamFile(filepath);
   }
 
-  int ReadStreamForVocab(int num_lines) {
+  std::pair<int, bool> ReadStreamForVocab(int num_lines) {
     return obj_.ReadStreamForVocab(num_lines);
   }
 

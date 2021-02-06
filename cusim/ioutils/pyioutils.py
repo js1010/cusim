@@ -33,9 +33,9 @@ class IoUtils:
     full_num_lines = self.obj.load_stream_file(filepath)
     pbar = tqdm.trange(full_num_lines)
     while True:
-      num_lines = self.obj.read_stream_for_vocab(chunk_lines)
+      num_lines, finished = self.obj.read_stream_for_vocab(chunk_lines)
       pbar.update(num_lines)
-      if num_lines < chunk_lines:
-        pbar.close()
+      if finished:
         break
+    pbar.close()
     self.obj.get_word_vocab(min_count)

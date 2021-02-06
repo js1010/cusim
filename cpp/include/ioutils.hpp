@@ -32,7 +32,7 @@ class IoUtils {
   ~IoUtils();
   bool Init(std::string opt_path);
   int LoadStreamFile(std::string filepath);
-  int ReadStreamForVocab(int num_lines);
+  std::pair<int, bool> ReadStreamForVocab(int num_lines);
   void GetWordVocab(int min_count);
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
