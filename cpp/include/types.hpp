@@ -39,20 +39,3 @@
 #endif
 
 #define WARP_SIZE 32
-
-struct Neighbor {
-  cuda_scalar distance;
-  int nodeid;
-  bool checked;
-};
-
-// to manage the compatibility with hnswlib
-typedef unsigned int tableint;
-typedef unsigned int sizeint;
-typedef float scalar;
-typedef size_t labeltype;
-
-enum DIST_TYPE {
-  DOT,
-  L2,
-};
