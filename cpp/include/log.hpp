@@ -29,9 +29,9 @@
 
 namespace cusim {
 
-class CuHNSWLogger {
+class CuSimLogger {
  public:
-  CuHNSWLogger();
+  CuSimLogger();
   std::shared_ptr<spdlog::logger>& get_logger();
   void set_log_level(int level);
   int get_log_level();

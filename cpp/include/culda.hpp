@@ -30,14 +30,15 @@
 #include "log.hpp"
 #include "types.hpp"
 
-namespace culda {
+namespace cusim {
 
 class CuLDA {
  public: 
   CuLDA();
   ~CuLDA();
  private:
+  std::shared_ptr<spdlog::logger> logger_;
   thrust::device_vector<cuda_scalar> device_data_;
 };
 
-} // namespace culda
+} // namespace cusim
