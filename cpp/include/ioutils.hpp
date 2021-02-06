@@ -32,16 +32,18 @@ class IoUtils {
   ~IoUtils();
   bool Init(std::string opt_path);
   int LoadStreamFile(std::string filepath);
-  std::pair<int, bool> ReadStreamForVocab(int num_lines);
+  std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
   void GetWordVocab(int min_count);
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
 
+  std::mutex global_lock_;
   std::ifstream stream_fin_;
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
   std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
+  int num_lines_, remain_lines_;
 };  // class IoUtils
 
 } // namespace cusim

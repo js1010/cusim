@@ -14,7 +14,8 @@ from cusim import aux, IoUtils
 
 LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
-DATASET = "wiki-english-20171001"
+# DATASET = "wiki-english-20171001"
+DATASET = "fake-news"
 DATA_PATH = f"./res/{DATASET}.stream.txt"
 MIN_COUNT = 5
 
@@ -33,7 +34,7 @@ def download():
 def run():
   download()
   iou = IoUtils()
-  iou.load_stream_vocab(DATA_PATH, 5, 10000)
+  iou.load_stream_vocab(DATA_PATH, 5, 100000, 8)
 
 
 if __name__ == "__main__":

@@ -27,8 +27,8 @@ class IoUtilsBind {
     return obj_.LoadStreamFile(filepath);
   }
 
-  std::pair<int, bool> ReadStreamForVocab(int num_lines) {
-    return obj_.ReadStreamForVocab(num_lines);
+  std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads) {
+    return obj_.ReadStreamForVocab(num_lines, num_threads);
   }
 
   void GetWordVocab(int min_count) {
@@ -46,7 +46,8 @@ PYBIND11_PLUGIN(ioutils_bind) {
   .def(py::init())
   .def("init", &IoUtilsBind::Init, py::arg("opt_path"))
   .def("load_stream_file", &IoUtilsBind::LoadStreamFile, py::arg("filepath"))
-  .def("read_stream_for_vocab", &IoUtilsBind::ReadStreamForVocab, py::arg("num_lines"))
+  .def("read_stream_for_vocab", &IoUtilsBind::ReadStreamForVocab,
+      py::arg("num_lines"), py::arg("num_threads"))
   .def("get_word_vocab", &IoUtilsBind::GetWordVocab, py::arg("min_count"))
   .def("__repr__",
   [](const IoUtilsBind &a) {

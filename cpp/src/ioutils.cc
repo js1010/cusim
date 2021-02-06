@@ -56,28 +56,45 @@ int IoUtils::LoadStreamFile(std::string filepath) {
   word_idmap_.clear();
   word_list_.clear();
   word_count_.clear();
+  num_lines_ = count;
+  remain_lines_ = num_lines_;
   return count;
 }
 
-std::pair<int, bool> IoUtils::ReadStreamForVocab(int num_lines) {
-  int read_cnt = 0;
-  std::string line;
-  std::vector<std::string> line_vec;
-  while (not stream_fin_.eof() and read_cnt < num_lines) {
-    getline(stream_fin_, line);
-    ParseLine(line, line_vec);
-    for (auto& word: line_vec) {
-      if (not word_count_.count(word)) word_count_[word] = 0;
-      word_count_[word]++;
+std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) {
+  int read_lines = std::min(num_lines, remain_lines_);
+  remain_lines_ -= read_lines;
+  #pragma omp parallel num_threads(num_threads)
+  {
+    std::string line;
+    std::vector<std::string> line_vec;
+    std::unordered_map<std::string, int> word_count;
+    #pragma omp for schedule(dynamic, 4)
+    for (int i = 0; i < read_lines; ++i) {
+      // get line thread-safely
+      {
+        std::unique_lock<std::mutex> lock(global_lock_);
+        getline(stream_fin_, line);
+      }
+
+      // seems to bottle-neck
+      ParseLine(line, line_vec);
+
+      // update private word count
+      for (auto& word: line_vec) {
+        word_count[word]++;
+      }
     }
-    read_cnt++;
+
+    // update word count to class variable
+    {
+      std::unique_lock<std::mutex> lock(global_lock_);
+      for (auto& it: word_count) {
+        word_count_[it.first] += it.second;
+      }
+    }
   }
-  bool finished = false;
-  if (stream_fin_.eof()) {
-    stream_fin_.close();
-    finished = true;
-  }
-  return {read_cnt, finished};
+  return {read_lines, remain_lines_};
 }
 
 void IoUtils::GetWordVocab(int min_count) {

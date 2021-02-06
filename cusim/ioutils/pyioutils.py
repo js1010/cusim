@@ -29,13 +29,15 @@ class IoUtils:
     assert self.obj.init(bytes(tmp.name, "utf8")), f"failed to load {tmp.name}"
     os.remove(tmp.name)
 
-  def load_stream_vocab(self, filepath, min_count, chunk_lines=100000):
+  def load_stream_vocab(self, filepath, min_count,
+                        chunk_lines=100000, num_threads=4):
     full_num_lines = self.obj.load_stream_file(filepath)
     pbar = tqdm.trange(full_num_lines)
     while True:
-      num_lines, finished = self.obj.read_stream_for_vocab(chunk_lines)
-      pbar.update(num_lines)
-      if finished:
+      read_lines, remain_lines = \
+        self.obj.read_stream_for_vocab(chunk_lines, num_threads)
+      pbar.update(read_lines)
+      if not remain_lines:
         break
     pbar.close()
     self.obj.get_word_vocab(min_count)
