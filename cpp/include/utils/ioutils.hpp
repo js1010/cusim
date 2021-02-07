@@ -21,8 +21,8 @@
 #include <unordered_map>
 
 #include "json11.hpp"
-#include "log.hpp"
-#include "types.hpp"
+#include "utils/log.hpp"
+#include "utils/types.hpp"
 
 namespace cusim {
 

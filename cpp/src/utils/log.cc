@@ -5,7 +5,7 @@
 // LICENSE file in the root directory of this source tree.
 
 // reference: https://github.com/kakao/buffalo/blob/5f571c2c7d8227e6625c6e538da929e4db11b66d/lib/misc/log.cc
-#include "log.hpp"
+#include "utils/log.hpp"
 
 
 namespace cusim {
