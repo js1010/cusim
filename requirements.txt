@@ -1,0 +1,6 @@
+jsmin
+numpy
+pandas
+pybind11
+protobuf==3.10.0
+grpcio-tools==1.27.1

@@ -33,7 +33,7 @@
 namespace cusim {
 
 class CuLDA {
- public: 
+ public:
   CuLDA();
   ~CuLDA();
  private:

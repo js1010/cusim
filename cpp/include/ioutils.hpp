@@ -20,17 +20,35 @@
 #include <iostream>
 #include <unordered_map>
 
+#include "json11.hpp"
+#include "log.hpp"
+#include "types.hpp"
+
 namespace cusim {
 
 class IoUtils {
  public:
   IoUtils();
   ~IoUtils();
-  void LoadGensimVocab(std::string filepath, int min_count);
+  bool Init(std::string opt_path);
+  int LoadStreamFile(std::string filepath);
+  std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
+  std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
+  void GetWordVocab(int min_count, std::string keys_path);
+  void GetToken(int* indices, int* indptr, int offset);
  private:
-  std::vector<std::string> parse_line(std::string line);
-  std::unordered_map<std::string, int> word_idmap_;
+  void ParseLine(std::string line, std::vector<std::string>& line_vec);
+  void ParseLineImpl(std::string line, std::vector<std::string>& line_vec);
+
+  std::vector<std::vector<int>> indices_;
+  std::vector<int> indptr_;
+  std::mutex global_lock_;
+  std::ifstream stream_fin_;
+  json11::Json opt_;
+  std::shared_ptr<spdlog::logger> logger_;
+  std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
+  int num_lines_, remain_lines_;
 };  // class IoUtils
 
 } // namespace cusim
