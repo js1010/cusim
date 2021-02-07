@@ -68,7 +68,9 @@ class CMakeExtension(Extension):
 extend_compile_flags = get_extend_compile_flags()
 extra_compile_args = ['-fopenmp', '-std=c++14', '-ggdb', '-O3'] + \
   extend_compile_flags
-csrcs = glob.glob("cpp/src/*.cu") + glob.glob("cpp/src/*.cc")
+csrcs = \
+  glob.glob("cpp/src/**/*.cu", recursive=True) + \
+  glob.glob("cpp/src/**/*.cc", recursive=True)
 extensions = [
   Extension("cusim.ioutils.ioutils_bind",
             sources= csrcs + [ \

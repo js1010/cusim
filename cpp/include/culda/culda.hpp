@@ -36,9 +36,18 @@ class CuLDA {
  public:
   CuLDA();
   ~CuLDA();
+  bool Init(std::string opt_path);
+  void LoadModel(float* alpha, float* beta, int num_words);
+  void FeedData(const int* indices, const int* indptr,
+      int num_indices, int num_indptr);
+
  private:
+  json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
-  thrust::device_vector<cuda_scalar> device_data_;
+  thrust::device_vector<cuda_scalar> dev_alpha_, dev_beta_;
+  const float *alpha_, *beta_;
+  int block_cnt_, block_dim_;
+  int num_topics_, num_words_;
 };
 
 } // namespace cusim
