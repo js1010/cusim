@@ -31,8 +31,18 @@ class IoUtilsBind {
     return obj_.ReadStreamForVocab(num_lines, num_threads);
   }
 
-  void GetWordVocab(int min_count) {
-    return obj_.GetWordVocab(min_count);
+  std::pair<int, int> TokenizeStream(int num_lines, int num_threads) {
+    return obj_.TokenizeStream(num_lines, num_threads);
+  }
+
+  void GetWordVocab(int min_count, std::string keys_path) {
+    obj_.GetWordVocab(min_count, keys_path);
+  }
+
+  void GetToken(py::object& indices, py::object& indptr, int offset) {
+    int_array _indices(indices);
+    int_array _indptr(indptr);
+    obj_.GetToken(_indices.mutable_data(0), _indptr.mutable_data(0), offset);
   }
 
  private:
@@ -48,7 +58,12 @@ PYBIND11_PLUGIN(ioutils_bind) {
   .def("load_stream_file", &IoUtilsBind::LoadStreamFile, py::arg("filepath"))
   .def("read_stream_for_vocab", &IoUtilsBind::ReadStreamForVocab,
       py::arg("num_lines"), py::arg("num_threads"))
-  .def("get_word_vocab", &IoUtilsBind::GetWordVocab, py::arg("min_count"))
+  .def("tokenize_stream", &IoUtilsBind::TokenizeStream,
+      py::arg("num_lines"), py::arg("num_threads"))
+  .def("get_word_vocab", &IoUtilsBind::GetWordVocab,
+      py::arg("min_count"), py::arg("keys_path"))
+  .def("get_token", &IoUtilsBind::GetToken,
+      py::arg("indices"), py::arg("indptr"), py::arg("offset"))
   .def("__repr__",
   [](const IoUtilsBind &a) {
     return "<IoUtilsBind>";

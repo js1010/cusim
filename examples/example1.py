@@ -17,6 +17,7 @@ DOWNLOAD_PATH = "./res"
 # DATASET = "wiki-english-20171001"
 DATASET = "fake-news"
 DATA_PATH = f"./res/{DATASET}.stream.txt"
+DATA_PATH2 = f"./res/{DATASET}-converted"
 MIN_COUNT = 5
 
 def download():
@@ -33,8 +34,8 @@ def download():
 
 def run():
   download()
-  iou = IoUtils()
-  iou.load_stream_vocab(DATA_PATH, 5, 100000, 8)
+  iou = IoUtils(opt={"chunk_lines": 10000, "num_threads": 8})
+  iou.convert_stream_to_h5(DATA_PATH, 5, DATA_PATH2)
 
 
 if __name__ == "__main__":

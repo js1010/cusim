@@ -28,14 +28,19 @@ bool IoUtils::Init(std::string opt_path) {
 }
 
 void IoUtils::ParseLine(std::string line, std::vector<std::string>& ret) {
+  ParseLineImpl(line, ret);
+}
+
+
+void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
   ret.clear();
   int n = line.size();
   std::string element;
   for (int i = 0; i < n; ++i) {
-    if (line[i] == ' ') {
+    if (line[i] == ' ' or line[i] == ',') {
       ret.push_back(element);
       element.clear();
-    } else {
+    } else if (line[i] != '"') {
       element += line[i];
     }
   }
@@ -61,6 +66,56 @@ int IoUtils::LoadStreamFile(std::string filepath) {
   return count;
 }
 
+std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
+  int read_lines = std::min(num_lines, remain_lines_);
+  if (not read_lines) return {0, 0};
+  remain_lines_ -= read_lines;
+  indices_.clear();
+  indices_.resize(read_lines);
+  indptr_.resize(read_lines);
+  std::fill(indptr_.begin(), indptr_.end(), 0);
+  #pragma omp parallel num_threads(num_threads)
+  {
+    std::string line;
+    std::vector<std::string> line_vec;
+    #pragma omp for schedule(dynamic, 4)
+    for (int i = 0; i < read_lines; ++i) {
+      // get line thread-safely
+      {
+        std::unique_lock<std::mutex> lock(global_lock_);
+        getline(stream_fin_, line);
+      }
+
+      // seems to be bottle-neck
+      ParseLine(line, line_vec);
+
+      // tokenize
+      for (auto& word: line_vec) {
+        if (word_count_.count(word)) continue;
+        indices_[i].push_back(word_count_[word]);
+      }
+    }
+  }
+  int cumsum = 0;
+  for (int i = 0; i < read_lines; ++i) {
+    cumsum += indices_[i].size();
+    indptr_[i] = cumsum;
+  }
+  return {read_lines, indptr_[read_lines - 1]};
+}
+
+void IoUtils::GetToken(int* indices, int* indptr, int offset) {
+  int n = indices_.size();
+  for (int i = 0; i < n; ++i) {
+    int beg = i == 0? 0: indptr_[i - 1];
+    int end = indptr_[i];
+    for (int j = beg; j < end; ++j) {
+      indices[j] = indices_[i][j - beg];
+    }
+    indptr[i] = offset + indptr_[i];
+  }
+}
+
 std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) {
   int read_lines = std::min(num_lines, remain_lines_);
   remain_lines_ -= read_lines;
@@ -77,7 +132,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
         getline(stream_fin_, line);
       }
 
-      // seems to bottle-neck
+      // seems to be bottle-neck
       ParseLine(line, line_vec);
 
       // update private word count
@@ -94,10 +149,10 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
       }
     }
   }
-  return {read_lines, remain_lines_};
+  return {read_lines, word_count_.size()};
 }
 
-void IoUtils::GetWordVocab(int min_count) {
+void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   INFO("number of raw words: {}", word_count_.size());
   for (auto& it: word_count_) {
     if (it.second >= min_count) {
@@ -106,6 +161,18 @@ void IoUtils::GetWordVocab(int min_count) {
     }
   }
   INFO("number of words after filtering: {}", word_list_.size());
+
+  // write keys to csv file
+  std::ofstream fout(keys_path.c_str());
+  INFO("dump keys to {}", keys_path);
+  std::string header = "index,key\n";
+  fout.write(header.c_str(), header.size());
+  int n = word_list_.size();
+  for (int i = 0; i < n; ++i) {
+    std::string line = std::to_string(i) + ",\"" + word_list_[i] + "\"\n";
+    fout.write(line.c_str(), line.size());
+  }
+  fout.close();
 }
 
 }  // namespace cusim

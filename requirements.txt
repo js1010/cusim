@@ -1,3 +1,4 @@
+tqdm
 jsmin
 numpy
 pybind11
