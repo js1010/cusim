@@ -1,4 +1,3 @@
-tqdm
 jsmin
 numpy
 pandas

@@ -10,7 +10,10 @@ from os.path import join as pjoin
 
 import json
 import tempfile
-import tqdm
+
+import h5py
+import numpy as np
+
 from cusim import aux
 from cusim.ioutils.ioutils_bind import IoUtilsBind
 from cusim.config_pb2 import IoUtilsConfigProto
@@ -32,22 +35,50 @@ class IoUtils:
 
   def load_stream_vocab(self, filepath, min_count, keys_path):
     full_num_lines = self.obj.load_stream_file(filepath)
-    pbar = tqdm.trange(full_num_lines, unit="line",
-                       postfix={"word_count": 0})
+    pbar = aux.Progbar(full_num_lines, unit_name="line",
+                        stateful_metrics=["word_count"])
     processed = 0
     while True:
       read_lines, word_count = \
         self.obj.read_stream_for_vocab(
           self.opt.chunk_lines, self.opt.num_threads)
       processed += read_lines
-      pbar.set_postfix({"word_count": word_count}, refresh=False)
-      pbar.update(read_lines)
+      pbar.update(processed, values=[("word_count", word_count)])
       if processed == full_num_lines:
         break
-    pbar.close()
     self.obj.get_word_vocab(min_count, keys_path)
 
-  def convert_stream_to_h5(self, filepath, min_count, out_dir):
+  def convert_stream_to_h5(self, filepath, min_count, out_dir,
+                           chunk_indices=10000):
     os.makedirs(out_dir, exist_ok=True)
     keys_path = pjoin(out_dir, "keys.csv")
+    token_path = pjoin(out_dir, "token.h5")
+    self.logger.info("save key and token to %s, %s",
+                     keys_path, token_path)
     self.load_stream_vocab(filepath, min_count, keys_path)
+    full_num_lines = self.obj.load_stream_file(filepath)
+    pbar = aux.Progbar(full_num_lines, unit_name="line")
+    processed = 0
+    h5f = h5py.File(token_path, "w")
+    indices = h5f.create_dataset("indices", shape=(chunk_indices,),
+                                 maxshape=(None,), dtype=np.int32,
+                                 chunks=(chunk_indices,))
+    indptr =  h5f.create_dataset("indptr", shape=(full_num_lines + 1,),
+                                 dtype=np.int32, chunks=True)
+    processed, offset = 1, 0
+    indptr[0] = 0
+    while True:
+      read_lines, data_size = self.obj.tokenize_stream(
+        self.opt.chunk_lines, self.opt.num_threads)
+      _indices = np.empty(shape=(data_size,), dtype=np.int32)
+      _indptr = np.empty(shape=(read_lines,), dtype=np.int32)
+      self.obj.get_token(_indices, _indptr, offset)
+      indices.resize((offset + data_size,))
+      indices[offset:offset + data_size] = _indices
+      indptr[processed:processed + read_lines] = _indptr
+      offset += data_size
+      processed += read_lines
+      pbar.update(processed - 1)
+      if processed == full_num_lines + 1:
+        break
+    h5f.close()

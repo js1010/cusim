@@ -41,7 +41,7 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
       ret.push_back(element);
       element.clear();
     } else if (line[i] != '"') {
-      element += line[i];
+      element += std::tolower(line[i]);
     }
   }
   if (element.size() > 0) {
@@ -51,6 +51,7 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
 
 int IoUtils::LoadStreamFile(std::string filepath) {
   INFO("read gensim file to generate vocabulary: {}", filepath);
+  if (stream_fin_.is_open()) stream_fin_.close();
   stream_fin_.open(filepath.c_str());
   int count = 0;
   std::string line;
@@ -58,11 +59,9 @@ int IoUtils::LoadStreamFile(std::string filepath) {
     count++;
   stream_fin_.close();
   stream_fin_.open(filepath.c_str());
-  word_idmap_.clear();
-  word_list_.clear();
-  word_count_.clear();
   num_lines_ = count;
   remain_lines_ = num_lines_;
+  INFO("number of lines: {}", num_lines_);
   return count;
 }
 
@@ -91,7 +90,7 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
 
       // tokenize
       for (auto& word: line_vec) {
-        if (word_count_.count(word)) continue;
+        if (not word_count_.count(word)) continue;
         indices_[i].push_back(word_count_[word]);
       }
     }
@@ -149,6 +148,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
       }
     }
   }
+  if (not remain_lines_) stream_fin_.close();
   return {read_lines, word_count_.size()};
 }
 
