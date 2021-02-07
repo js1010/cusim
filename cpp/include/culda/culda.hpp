@@ -29,6 +29,7 @@
 #include "json11.hpp"
 #include "utils/log.hpp"
 #include "utils/types.hpp"
+#include "utils/cuda_info.cuh"
 
 namespace cusim {
 
@@ -42,6 +43,7 @@ class CuLDA {
       int num_indices, int num_indptr);
 
  private:
+  DeviceInfo dev_info_;
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
   thrust::device_vector<cuda_scalar> dev_alpha_, dev_beta_;

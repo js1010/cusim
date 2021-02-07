@@ -9,6 +9,10 @@ namespace cusim {
 
 CuLDA::CuLDA() {
   logger_ = CuSimLogger().get_logger();
+  dev_info_ = GetDeviceInfo();
+  if (dev_info_.unknown) DEBUG0("Unknown device type");
+  INFO("cuda device info, major: {}, minor: {}, multi processors: {}, cores: {}",
+       dev_info_.major, dev_info_.minor, dev_info_.mp_cnt, dev_info_.cores);
 }
 
 CuLDA::~CuLDA() {}
@@ -26,6 +30,7 @@ bool CuLDA::Init(std::string opt_path) {
   CuSimLogger().set_log_level(opt_["c_log_level"].int_value());
   num_topics_ = opt_["num_topics"].int_value();
   block_dim_ = opt_["block_dim"].int_value();
+  block_cnt_ = opt_["hyper_threads"].number_value() * (dev_info_.cores / block_dim_);
   return true;
 }
 
@@ -53,7 +58,6 @@ void CuLDA::LoadModel(float* alpha, float* beta, int num_words) {
 }
 
 void CuLDA::FeedData(const int* indices, const int* indptr, int num_indices, int num_indptr) {
-  
 }
 
 } // namespace cusim

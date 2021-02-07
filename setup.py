@@ -68,13 +68,24 @@ class CMakeExtension(Extension):
 extend_compile_flags = get_extend_compile_flags()
 extra_compile_args = ['-fopenmp', '-std=c++14', '-ggdb', '-O3'] + \
   extend_compile_flags
-csrcs = \
-  glob.glob("cpp/src/**/*.cu", recursive=True) + \
-  glob.glob("cpp/src/**/*.cc", recursive=True)
+util_srcs = glob.glob("cpp/src/utils/*.cc")
 extensions = [
   Extension("cusim.ioutils.ioutils_bind",
-            sources= csrcs + [ \
+            sources= util_srcs + [ \
               "cusim/ioutils/bindings.cc",
+              "3rd/json11/json11.cpp"],
+            language="c++",
+            extra_compile_args=extra_compile_args,
+            extra_link_args=["-fopenmp"],
+            extra_objects=[],
+            include_dirs=[ \
+              "cpp/include/", np.get_include(), pybind11.get_include(),
+              pybind11.get_include(True),
+              "3rd/json11", "3rd/spdlog/include"]),
+  Extension("cusim.culda.culda_bind",
+            sources= util_srcs + [ \
+              "cpp/src/culda/culda.cu",
+              "cusim/culda/bindings.cc",
               "3rd/json11/json11.cpp"],
             language="c++",
             extra_compile_args=extra_compile_args,
@@ -85,7 +96,7 @@ extensions = [
             include_dirs=[ \
               "cpp/include/", np.get_include(), pybind11.get_include(),
               pybind11.get_include(True), CUDA['include'],
-              "3rd/json11", "3rd/spdlog/include"])
+              "3rd/json11", "3rd/spdlog/include"]),
 ]
 
 
@@ -168,7 +179,7 @@ def setup_package():
     download_url="https://github.com/js1010/cusim/releases",
     include_package_data=False,
     license='Apac2',
-    packages=['cusim/', "cusim/ioutils/"],
+    packages=['cusim/', "cusim/ioutils/", "cusim/culda/"],
     cmdclass=cmdclass,
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     platforms=['Linux', 'Mac OSX', 'Unix'],

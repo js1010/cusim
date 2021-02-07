@@ -26,7 +26,7 @@ class CuLDABind {
   void LoadModel(py::object& alpha, py::object& beta) {
     float_array _alpha(alpha);
     float_array _beta(beta);
-    auto alpha_buffer = _alphpa.request();
+    auto alpha_buffer = _alpha.request();
     auto beta_buffer = _beta.request();
     if (alpha_buffer.ndim != 1 or beta_buffer.ndim != 2 or
         alpha_buffer.shape[0] != beta_buffer.shape[0]) {
@@ -43,10 +43,10 @@ class CuLDABind {
 PYBIND11_PLUGIN(culda_bind) {
   py::module m("CuLDABind");
 
-  py::class_<IoUtilsBind>(m, "CuLDABind")
+  py::class_<CuLDABind>(m, "CuLDABind")
   .def(py::init())
   .def("init", &CuLDABind::Init, py::arg("opt_path"))
-  .def("load_model", &IoUtilsBind::LoadModel,
+  .def("load_model", &CuLDABind::LoadModel,
       py::arg("alpha"), py::arg("beta"))
   .def("__repr__",
   [](const CuLDABind &a) {

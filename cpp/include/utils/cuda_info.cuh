@@ -26,19 +26,16 @@
 #include <cmath>
 #include <chrono> // NOLINT
 
-#include "json11.hpp"
-#include "utils/log.hpp"
-#include "utils/types.hpp"
+#include "utils/cuda_base_kernels.cuh"
 
-#define DEBUG1(x) LOGGER->debug("[{}:{}] " x "\n", __FILENAME__, __LINE__);
 
 namespace cusim {
 
-std::shared_ptr<spdlog::logger> LOGGER = CuSimLogger().get_logger();
 
 struct DeviceInfo {
   int devId, mp_cnt, major, minor, cores;
-}
+  bool unknown = false;
+};
 
 DeviceInfo GetDeviceInfo() {
   DeviceInfo ret;
@@ -68,29 +65,29 @@ DeviceInfo GetDeviceInfo() {
       else if (ret.minor == 0)
         ret.cores = ret.mp_cnt * 64;
       else
-        DEBUG1("Unknown device type");
+        ret.unknown = true;
       break;
     case 7: // Volta and Turing
       if (ret.minor == 0 or ret.minor == 5)
         ret.cores = ret.mp_cnt * 64;
       else
-        DEBUG1("Unknown device type");
+        ret.unknown = true;
       break;
     case 8: // Ampere
       if (ret.minor == 0)
         ret.cores = ret.mp_cnt * 64;
-      else if (minor_ == 6)
+      else if (ret.minor == 6)
         ret.cores = ret.mp_cnt * 128;
       else
-        DEBUG1("Unknown device type");
+        ret.unknown = true;
       break;
     default:
-      DEBUG1("Unknown device type");
+        ret.unknown = true;
       break;
   }
   if (ret.cores == -1) ret.cores = ret.mp_cnt * 128;
-  return ret
+  return ret;
 }
 
 
-} // namespace cusim
+}  // namespace cusim

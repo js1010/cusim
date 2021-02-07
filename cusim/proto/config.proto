@@ -12,3 +12,12 @@ message IoUtilsConfigProto {
   optional int32 chunk_lines = 3 [default = 100000];
   optional int32 num_threads = 4 [default = 4];
 }
+
+message CuLDAConfigProto {
+  optional int32 py_log_level = 1 [default = 2];
+  optional int32 c_log_level = 2 [default = 2];
+
+  optional int32 num_topics = 3 [default = 10];
+  optional int32 block_dim = 4 [default = 32];
+  optional int32 hyper_threads = 5 [default = 10];
+}
