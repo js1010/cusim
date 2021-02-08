@@ -19,23 +19,27 @@
   #define mul(x, y) ( __hmul(x, y) )
   #define add(x, y) ( __hadd(x, y) )
   #define sub(x, y) ( __hsub(x, y) )
+  #define div(x, y) ( __hdiv(x, y) )
   #define gt(x, y) ( __hgt(x, y) )  // x > y
   #define ge(x, y) ( __hge(x, y) )  // x >= y
   #define lt(x, y) ( __hlt(x, y) )  // x < y
   #define le(x, y) ( __hle(x, y) )  // x <= y
   #define out_scalar(x) ( __half2float(x) )
   #define conversion(x) ( __float2half(x) )
+  #define cuda_exp(x) ( __hexp(x) )
 #else
   typedef float cuda_scalar;
   #define mul(x, y) ( x * y )
   #define add(x, y) ( x + y )
   #define sub(x, y) ( x - y )
+  #define div(x, y) ( x / y )
   #define gt(x, y) ( x > y )
   #define ge(x, y) ( x >= y )
   #define lt(x, y) ( x < y )
   #define le(x, y) ( x <= y )
   #define out_scalar(x) ( x )
   #define conversion(x) ( x )
+  #define cuda_exp(x) ( expf(x) )
 #endif
 
 #define WARP_SIZE 32

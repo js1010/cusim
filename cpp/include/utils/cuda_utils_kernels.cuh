@@ -115,34 +115,34 @@ inline DeviceInfo GetDeviceInfo() {
 }
 
 __inline__ __device__
-cuda_scalar warp_reduce_sum(cuda_scalar val) {
+float warp_reduce_sum(float val) {
   #if __CUDACC_VER_MAJOR__ >= 9
   // __shfl_down is deprecated with cuda 9+. use newer variants
   unsigned int active = __activemask();
   #pragma unroll
   for (int offset = WARP_SIZE / 2; offset > 0; offset /= 2) {
-      val = add(val, __shfl_down_sync(active, val, offset));
+      val += __shfl_down_sync(active, val, offset);
   }
   #else
   #pragma unroll
   for (int offset = WARP_SIZE / 2; offset > 0; offset /= 2) {
-      val = add(val, __shfl_down(val, offset));
+      val += __shfl_down(val, offset);
   }
   #endif
   return val;
 }
 
 __inline__ __device__
-cuda_scalar Sum(const cuda_scalar* vec, const int length) {
+float ReduceSum(const float* vec, const int length) {
   
-  static __shared__ cuda_scalar shared[32];
+  static __shared__ floaat shared[32];
 
   // figure out the warp/ position inside the warp
   int warp =  threadIdx.x / WARP_SIZE;
   int lane = threadIdx.x % WARP_SIZE;
   
   // paritial sum
-  cuda_scalar val = 0;
+  float val = 0.0f;
   for (int i = threadIdx.x; i < length; i += blockDim.x) 
     val += vec[i];
   val = warp_reduce_sum(val);
@@ -159,7 +159,7 @@ cuda_scalar Sum(const cuda_scalar* vec, const int length) {
   }
 
   // otherwise reduce again in the first warp
-  val = (threadIdx.x < blockDim.x / WARP_SIZE) ? shared[lane]: conversion(0.0f);
+  val = (threadIdx.x < blockDim.x / WARP_SIZE) ? shared[lane]: 0.0f;
   if (warp == 0) {
     val = warp_reduce_sum(val);
     // broadcast back to shared memory
