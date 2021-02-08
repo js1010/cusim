@@ -29,7 +29,7 @@
 #include "json11.hpp"
 #include "utils/log.hpp"
 #include "utils/types.hpp"
-#include "utils/cuda_info.cuh"
+#include "utils/cuda_utils_kernels.cuh"
 
 namespace cusim {
 

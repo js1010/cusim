@@ -39,3 +39,8 @@
 #endif
 
 #define WARP_SIZE 32
+
+struct DeviceInfo {
+  int devId, mp_cnt, major, minor, cores;
+  bool unknown = false;
+};

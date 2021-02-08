@@ -71,7 +71,7 @@ extra_compile_args = ['-fopenmp', '-std=c++14', '-ggdb', '-O3'] + \
 util_srcs = glob.glob("cpp/src/utils/*.cc")
 extensions = [
   Extension("cusim.ioutils.ioutils_bind",
-            sources= util_srcs + [ \
+            sources = util_srcs + [ \
               "cusim/ioutils/bindings.cc",
               "3rd/json11/json11.cpp"],
             language="c++",

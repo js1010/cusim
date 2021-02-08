@@ -22,7 +22,6 @@
 
 #include "json11.hpp"
 #include "utils/log.hpp"
-#include "utils/types.hpp"
 
 namespace cusim {
 
