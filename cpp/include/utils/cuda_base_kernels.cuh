@@ -26,6 +26,63 @@
 
 namespace cusim {
 
+struct DeviceInfo {
+  int devId, mp_cnt, major, minor, cores;
+  bool unknown = false;
+};
+
+DeviceInfo GetDeviceInfo2() {
+  DeviceInfo ret;
+  CHECK_CUDA(cudaGetDevice(&ret.devId));
+  cudaDeviceProp prop;
+  CHECK_CUDA(cudaGetDeviceProperties(&prop, ret.devId));
+  ret.mp_cnt = prop.multiProcessorCount;
+  ret.major = prop.major;
+  ret.minor = prop.minor;
+  // reference: https://stackoverflow.com/a/32531982
+  switch (ret.major) {
+    case 2: // Fermi
+      if (ret.minor == 1)
+        ret.cores = ret.mp_cnt * 48;
+      else
+        ret.cores = ret.mp_cnt * 32;
+      break;
+    case 3: // Kepler
+      ret.cores = ret.mp_cnt * 192;
+      break;
+    case 5: // Maxwell
+      ret.cores = ret.mp_cnt * 128;
+      break;
+    case 6: // Pascal
+      if (ret.minor == 1 or ret.minor == 2)
+        ret.cores = ret.mp_cnt * 128;
+      else if (ret.minor == 0)
+        ret.cores = ret.mp_cnt * 64;
+      else
+        ret.unknown = true;
+      break;
+    case 7: // Volta and Turing
+      if (ret.minor == 0 or ret.minor == 5)
+        ret.cores = ret.mp_cnt * 64;
+      else
+        ret.unknown = true;
+      break;
+    case 8: // Ampere
+      if (ret.minor == 0)
+        ret.cores = ret.mp_cnt * 64;
+      else if (ret.minor == 6)
+        ret.cores = ret.mp_cnt * 128;
+      else
+        ret.unknown = true;
+      break;
+    default:
+        ret.unknown = true;
+      break;
+  }
+  if (ret.cores == -1) ret.cores = ret.mp_cnt * 128;
+  return ret;
+}
+
 // Error Checking utilities, checks status codes from cuda calls
 // and throws exceptions on failure (which cython can proxy back to python)
 #define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }

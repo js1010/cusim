@@ -37,7 +37,7 @@ struct DeviceInfo {
   bool unknown = false;
 };
 
-DeviceInfo GetDeviceInfo() {
+DeviceInfo GetDeviceInfo2() {
   DeviceInfo ret;
   CHECK_CUDA(cudaGetDevice(&ret.devId));
   cudaDeviceProp prop;
