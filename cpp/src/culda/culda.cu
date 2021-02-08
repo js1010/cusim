@@ -31,6 +31,7 @@ bool CuLDA::Init(std::string opt_path) {
   num_topics_ = opt_["num_topics"].int_value();
   block_dim_ = opt_["block_dim"].int_value();
   block_cnt_ = opt_["hyper_threads"].number_value() * (dev_info_.cores / block_dim_);
+  INFO("num_topics: {}, block_dim: {}, block_cnt: {}", num_topics_, block_dim_, block_cnt_);
   return true;
 }
 
@@ -57,7 +58,14 @@ void CuLDA::LoadModel(float* alpha, float* beta, int num_words) {
   alpha_ = alpha; beta_ = beta;
 }
 
-void CuLDA::FeedData(const int* indices, const int* indptr, int num_indices, int num_indptr) {
+void CuLDA::FeedData(const int* indices, const int* indptr, 
+    int num_indices, int num_indptr, float* gamma) {
+  thrust::vector<int> dev_phi(num_indices * num_topics_);
+  thrust::vector<int> dev_gamma(num_indptr * num_topics_);
+
+
+
+
 }
 
 } // namespace cusim

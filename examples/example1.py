@@ -10,7 +10,7 @@ import subprocess
 import fire
 
 from gensim import downloader as api
-from cusim import aux, IoUtils
+from cusim import aux, IoUtils, CuLDA
 
 LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
@@ -32,11 +32,14 @@ def download():
   LOGGER.info("cmd: %s", cmd)
   subprocess.call(cmd, shell=True)
 
-def run():
+def run_io():
   download()
   iou = IoUtils(opt={"chunk_lines": 10000, "num_threads": 8})
   iou.convert_stream_to_h5(DATA_PATH, 5, DATA_PATH2)
 
+
+def run_lda():
+  CuLDA()
 
 if __name__ == "__main__":
   fire.Fire()
