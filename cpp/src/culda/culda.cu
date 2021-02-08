@@ -40,32 +40,15 @@ void CuLDA::LoadModel(float* alpha, float* beta, int num_words) {
   DEBUG("copy model({} x {})", num_topics_, num_words_);
   dev_alpha_.resize(num_topics_);
   dev_beta_.resize(num_topics_ * num_words_);
-  #ifdef HALF_PRECISION
-    // conversion to half data and copy
-    std::vector<cuda_scalar> halpha(num_topics_), hbeta(num_topics_ * num_words_);
-    for (int i = 0; i < num_topics_; ++i) {
-      halpha[i] = conversion(alpha[i]);
-      for (int j = 0; j < num_words_; ++j) {
-        hbeta[i * num_words + j] = conversion(beta[i * num_words + j]);
-      }
-    }
-    thrust::copy(halpha.begin(), halpha.end(), dev_alapha_.begin());
-    thrust::copy(hbeta.begin(), hbeta.end(), dev_beta_.begin());
-  #else
-    thrust::copy(alpha, alpha + num_topics_, dev_alpha_.begin());
-    thrust::copy(beta, beta + num_topics_ * num_words_, dev_beta_.begin());
-  #endif
+  thrust::copy(alpha, alpha + num_topics_, dev_alpha_.begin());
+  thrust::copy(beta, beta + num_topics_ * num_words_, dev_beta_.begin());
   alpha_ = alpha; beta_ = beta;
 }
 
 void CuLDA::FeedData(const int* indices, const int* indptr, 
-    int num_indices, int num_indptr, float* gamma) {
-  thrust::vector<int> dev_phi(num_indices * num_topics_);
-  thrust::vector<int> dev_gamma(num_indptr * num_topics_);
-
-
-
-
+    int num_indices, int num_indptr) {
+  thrust::device_vector<int> dev_phi(num_indices * num_topics_);
+  thrust::device_vector<int> dev_gamma(num_indptr * num_topics_);
 }
 
 } // namespace cusim

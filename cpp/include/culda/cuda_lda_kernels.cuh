@@ -6,25 +6,35 @@
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
 
+
 namespace cusim {
 
 __inline__ __device__
-cuda_scalar Psi(cuda_scalar x) {
-  
+float Digamma(float x) {
+  float result = 0f, xx, xx2, xx4;
+  for ( ; x < 7.0f; ++x)
+    result -= 1.0f / x;
+  x -= 0.5f;
+  xx = 1.0f / x;
+  xx2 = xx * xx;
+  xx4 = xx2 * xx2;
+  result += logf(x) + 1.0f / 24.0f * xx2 - 7.0f / 960.0f * xx4 + 
+    31.0f / 8064.0f * xx4 * xx2 - 127.0f / 30720.0f * xx4 * xx4;
+  return result;
 }
 
 __global__ void EstepKernel(
   const int* indices, const int* indptr, 
   const int num_indices, const int num_indptr,
   const int num_words, const int num_topics, const int num_iters,
-  cuda_scalar* gamma, cuda_scalar* new_gamma, cuda_scalar* phi,
-  cuda_scalar* alpha, cuda_scalar* beta,
-  cuda_scalar* grad_alpha, cuda_scalar* new_beta) {
+  float* gamma, float* new_gamma, float* phi,
+  float* alpha, float* beta,
+  float* grad_alpha, float* new_beta) {
   
   // storage for block
-  cuda_scalar* _gamma = gamma + num_topics * blockIdx.x;
-  cuda_scalar* _new_gamma = new_gamma + num_topics * blockIdx.x;
-  cuda_scalar* _phi = phi + num_topics * blockIdx.x;
+  float* _gamma = gamma + num_topics * blockIdx.x;
+  float* _new_gamma = new_gamma + num_topics * blockIdx.x;
+  float* _phi = phi + num_topics * blockIdx.x;
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
     int beg = indptr[i], end = indptr[i + 1];
@@ -46,11 +56,11 @@ __global__ void EstepKernel(
         int w = indices[k];
         // compute phi
         for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
-          _phi[l] = beta[w * num_topics + l] * exp(Psi(_gamma[l]));
+          _phi[l] = beta[w * num_topics + l] * expf(Digamma(_gamma[l]));
         __syncthreads();
         
         // normalize phi and add it to new gamma and new beta
-        cuda_scalar phi_sum = Sum(_phi, num_topics);
+        float phi_sum = ReduceSum(_phi, num_topics);
         for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
           _phi[l] /= phi_sum;
           _new_gamma[l] += _phi[l];
@@ -64,11 +74,19 @@ __global__ void EstepKernel(
         _gamma[k] = _new_gamma[k] + alpha[k];
       __syncthreads();
     }
-    cuda_scalar gamma_sum = Sum(_gamma, num_topics);
+    float gamma_sum = ReduceSum(_gamma, num_topics);
     for (int j = threadIdx.x; j < num_topics, j += blockDim.x)
       grad_alpha[j] += (Psi(_gamma[j]) - Psi(gamma_sum));
     __syncthreaads()
   } 
+}
+
+__global__ void MstepKernel(
+  float* alpha, float* beta,
+  float* grad_alpha, float* new_beta,
+  const int num_words, const int num_topic) {
+  
+
 }
 
 }  // cusim

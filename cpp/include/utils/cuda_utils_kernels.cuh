@@ -22,11 +22,14 @@
 #include <ctime>
 #include <utility>
 
-#include "utils/types.hpp"
-
 namespace cusim {
 
+struct DeviceInfo {
+  int devId, mp_cnt, major, minor, cores;
+  bool unknown = false;
+};
 
+#define WARP_SIZE 32
 // Error Checking utilities, checks status codes from cuda calls
 // and throws exceptions on failure (which cython can proxy back to python)
 #define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }
@@ -135,7 +138,7 @@ float warp_reduce_sum(float val) {
 __inline__ __device__
 float ReduceSum(const float* vec, const int length) {
   
-  static __shared__ floaat shared[32];
+  static __shared__ float shared[32];
 
   // figure out the warp/ position inside the warp
   int warp =  threadIdx.x / WARP_SIZE;
