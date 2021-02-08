@@ -36,7 +36,8 @@ bool CuLDA::Init(std::string opt_path) {
   return true;
 }
 
-void CuLDA::LoadModel(float* alpha, float* beta, int num_words) {
+void CuLDA::LoadModel(float* alpha, float* beta, 
+    float* grad_alpha, float* new_beta, int num_words) {
   num_words_ = num_words;
   DEBUG("copy model({} x {})", num_topics_, num_words_);
   dev_alpha_.resize(num_topics_);
@@ -44,28 +45,19 @@ void CuLDA::LoadModel(float* alpha, float* beta, int num_words) {
   thrust::copy(alpha, alpha + num_topics_, dev_alpha_.begin());
   thrust::copy(beta, beta + num_topics_ * num_words_, dev_beta_.begin());
   alpha_ = alpha; beta_ = beta;
-  InitModel();
-}
-
-void CuLDA::InitModel() {
+  
   // resize device vector
+  grad_alpha_ = grad_alpha;
+  new_beta_ = new_beta;
   dev_grad_alpha_.resize(num_topics_);
   dev_new_beta_.resize(num_topics_ * num_words_);
+
+  // copy to device
+  thrust::copy(grad_alpha_, grad_alpha_ + num_topics_, dev_grad_alpha_.begin());
+  thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
   dev_gamma_.resize(num_topics_ * block_cnt_);
   dev_new_gamma_.resize(num_topics_ * block_cnt_);
   dev_phi_.resize(num_topics_ * block_cnt_);
-  
-  // resize host vector
-  grad_alpha_.resize(num_topics_);
-  new_beta_.resize(num_topics_ * num_words_);
-
-  // fill zeros
-  std::fill(grad_alpha_.begin(), grad_alpha_.end(), 0);
-  std::fill(new_beta_.begin(), new_beta_.end(), 0);
-
-  // copy to device
-  thrust::copy(grad_alpha_.begin(), grad_alpha_.end(), dev_grad_alpha_.begin());
-  thrust::copy(new_beta_.begin(), new_beta_.end(), dev_new_beta_.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
@@ -92,12 +84,18 @@ void CuLDA::FeedData(const int* indices, const int* indptr,
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
-void CuLDA::Mstep(const int num_docs) {
-  thrust::copy(dev_grad_alpha_.begin(), dev_grad_alpha_.end(), grad_alpha_.begin());
-  thrust::copy(dev_new_beta_.begin(), dev_new_beta_.end(), new_beta_.begin());
+void CuLDA::Pull() {
+  thrust::copy(dev_grad_alpha_.begin(), dev_grad_alpha_.end(), grad_alpha_);
+  thrust::copy(dev_new_beta_.begin(), dev_new_beta_.end(), new_beta_);
   CHECK_CUDA(cudaDeviceSynchronize());
-  
-
 }
 
-} // namespace cusim
+void CuLDA::Push() {
+  thrust::copy(alpha_, alpha_ + num_topics_, dev_alpha_.begin());
+  thrust::copy(grad_alpha_, grad_alpha_ + num_topics_, dev_grad_alpha_.begin());
+  thrust::copy(beta_, beta_ + num_words_ * num_topics_, dev_beta_.begin());
+  thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
+  CHECK_CUDA(cudaDeviceSynchronize());
+}
+
+}  // namespace cusim
