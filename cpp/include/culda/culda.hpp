@@ -32,15 +32,41 @@
 
 namespace cusim {
 
+
+// reference: https://people.math.sc.edu/Burkardt/cpp_src/asa121/asa121.cpp
+inline float Trigamma(float x) {
+  const float a = 0.0001f;
+  const float b = 5.0f;
+  const float b2 =  0.1666666667f;
+  const float b4 = -0.03333333333f;
+  const float b6 =  0.02380952381f;
+  const float b8 = -0.03333333333f;
+  float value = 0, y = 0, z = x;
+  if (x <= a) return 1.0f / x / x;
+  while (z < b) {
+    value += 1.0f / z / z;
+    z++;
+  }
+  y = 1.0f / z / z;
+  value += value + 0.5 * y + (1.0
+    + y * (b2
+    + y * (b4
+    + y * (b6
+    + y * b8)))) / z;
+  return value;
+}
+
+
 class CuLDA {
  public:
   CuLDA();
   ~CuLDA();
   bool Init(std::string opt_path);
-  void LoadModel(float* alpha, float* beta, int num_words);
+  void LoadModel(float* alpha, float* beta, const int num_words);
+  void InitModel();
   void FeedData(const int* indices, const int* indptr,
-      int num_indices, int num_indptr);
-
+      const int num_indices, const int num_indptr, const int num_iters);
+  void Mstep(const int num_docs);
  private:
   DeviceInfo dev_info_;
   json11::Json opt_;
@@ -49,6 +75,7 @@ class CuLDA {
   thrust::device_vector<float> dev_grad_alpha_, dev_new_beta_;
   thrust::device_vector<float> dev_gamma_, dev_new_gamma_, dev_phi_;
   const float *alpha_, *beta_;
+  std::vector<float> grad_alpha_, new_beta_;
   int block_cnt_, block_dim_;
   int num_topics_, num_words_;
 };
