@@ -20,4 +20,5 @@ message CuLDAConfigProto {
   optional int32 num_topics = 3 [default = 10];
   optional int32 block_dim = 4 [default = 32];
   optional int32 hyper_threads = 5 [default = 10];
+  required string data_dir = 6;
 }

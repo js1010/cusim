@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Jisang Yoon
+# Copyright (c) 2021 Jisang Yoon
 # All rights reserved.
 #
 # This source code is licensed under the Apache 2.0 license found in the
@@ -30,7 +30,8 @@ if sys.version_info[:3] < (3, 6):
   raise RuntimeError("Python version 3.6 or later required.")
 
 assert platform.system() == 'Linux'  # TODO: MacOS
-
+with open("requirements.txt", "r") as fin:
+  INSTALL_REQUIRES = [line.strip() for line in fin]
 
 MAJOR = 0
 MINOR = 0
@@ -173,13 +174,16 @@ def setup_package():
     name='cusim',
     maintainer="Jisang Yoon",
     maintainer_email="vjs10101v@gmail.com",
+    author="Jisang Yoon",
+    author_email="vjs10101v@gmail.com",
     description=DOCLINES[0],
     long_description="\n".join(DOCLINES[2:]),
     url="https://github.com/js1010/cusim",
     download_url="https://github.com/js1010/cusim/releases",
     include_package_data=False,
-    license='Apac2',
+    license='Apache2',
     packages=['cusim/', "cusim/ioutils/", "cusim/culda/"],
+    install_requires=INSTALL_REQUIRES,
     cmdclass=cmdclass,
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],
     platforms=['Linux', 'Mac OSX', 'Unix'],

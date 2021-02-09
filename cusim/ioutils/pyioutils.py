@@ -51,7 +51,7 @@ class IoUtils:
   def convert_stream_to_h5(self, filepath, min_count, out_dir,
                            chunk_indices=10000):
     os.makedirs(out_dir, exist_ok=True)
-    keys_path = pjoin(out_dir, "keys.csv")
+    keys_path = pjoin(out_dir, "keys.txt")
     token_path = pjoin(out_dir, "token.h5")
     self.logger.info("save key and token to %s, %s",
                      keys_path, token_path)

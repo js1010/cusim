@@ -165,11 +165,9 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   // write keys to csv file
   std::ofstream fout(keys_path.c_str());
   INFO("dump keys to {}", keys_path);
-  std::string header = "index,key\n";
-  fout.write(header.c_str(), header.size());
   int n = word_list_.size();
   for (int i = 0; i < n; ++i) {
-    std::string line = std::to_string(i) + ",\"" + word_list_[i] + "\"\n";
+    std::string line = word_list_[i] + "\n";
     fout.write(line.c_str(), line.size());
   }
   fout.close();
