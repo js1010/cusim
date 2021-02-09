@@ -31,7 +31,7 @@ class CuLDABind {
     auto alpha_buffer = _alpha.request();
     auto beta_buffer = _beta.request();
     if (alpha_buffer.ndim != 1 or beta_buffer.ndim != 2 or
-        alpha_buffer.shape[0] != beta_buffer.shape[0]) {
+        alpha_buffer.shape[0] != beta_buffer.shape[1]) {
       throw std::runtime_error("invalid alpha or beta");
     }
 
@@ -42,7 +42,7 @@ class CuLDABind {
     auto new_beta_buffer = _new_beta.request();
     if (grad_alpha_buffer.ndim != 1 or
         new_beta_buffer.ndim != 2 or
-        grad_alpha_buffer.shape[0] != new_beta_buffer.shape[0]) {
+        grad_alpha_buffer.shape[0] != new_beta_buffer.shape[1]) {
       throw std::runtime_error("invalid grad_alpha or new_beta");
     }
 

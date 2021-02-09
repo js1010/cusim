@@ -39,7 +39,12 @@ def run_io():
 
 
 def run_lda():
-  CuLDA()
+  opt = {
+    "data_dir": DATA_PATH2,
+  }
+  lda = CuLDA(opt)
+  lda.init_model()
+
 
 if __name__ == "__main__":
   fire.Fire()

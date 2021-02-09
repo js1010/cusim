@@ -38,14 +38,26 @@ class CuLDA:
       None, None, None, None
 
   def init_model(self):
-    with open(pjoin(self.opt.data_dir, "keys.txt"), "r") as fin:
+    # load voca
+    self.logger.info("load key from %s", pjoin(self.opt.data_dir, "keys.txt"))
+    with open(pjoin(self.opt.data_dir, "keys.txt"), "rb") as fin:
       self.words = [line.strip() for line in fin]
     self.num_words = len(self.words)
+    self.logger.info("number of words: %d", self.num_words)
+
+    # random initialize alpha and beta
     self.alpha = \
-      np.abs(np.uniform(shape=(self.opt.num_topics,))).astype(np.float32)
-    self.beta = np.abs(np.uniform( \
-      shape=(self.num_words, self.opt.num_topics))).astype(np.float32)
-    self.beta /= np.sum(self.beta, axis=1)[None, :]
+      np.abs(np.random.uniform( \
+        size=(self.opt.num_topics,))).astype(np.float32)
+    self.beta = np.abs(np.random.uniform( \
+      size=(self.num_words, self.opt.num_topics))).astype(np.float32)
+    self.beta /= np.sum(self.beta, axis=0)[None, :]
+    self.logger.info("alpha %s, beta %s initialized",
+                     self.alpha.shape, self.beta.shape)
+
+    # zero initialize grad alpha and new beta
     self.grad_alpha = np.zeros(shape=self.alpha.shape, dtype=np.float32)
     self.new_beta = np.zeros(shape=self.beta.shape, dtype=np.float32)
+
+    # push it to gpu
     self.obj.load_model(self.alpha, self.beta, self.grad_alpha, self.new_beta)
