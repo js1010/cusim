@@ -21,15 +21,10 @@
 #include <sstream>
 #include <ctime>
 #include <utility>
+#include "utils/types.hpp"
 
 namespace cusim {
 
-struct DeviceInfo {
-  int devId, mp_cnt, major, minor, cores;
-  bool unknown = false;
-};
-
-#define WARP_SIZE 32
 // Error Checking utilities, checks status codes from cuda calls
 // and throws exceptions on failure (which cython can proxy back to python)
 #define CHECK_CUDA(code) { checkCuda((code), __FILE__, __LINE__); }

@@ -28,7 +28,7 @@
 
 #include "json11.hpp"
 #include "utils/log.hpp"
-#include "utils/cuda_utils_kernels.cuh"
+#include "utils/types.hpp"
 
 namespace cusim {
 
