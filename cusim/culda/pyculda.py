@@ -37,6 +37,14 @@ class CuLDA:
     self.alpha, self.beta, self.grad_alpha, self.new_beta = \
       None, None, None, None
 
+  def preprocess_data(self):
+    if self.opt.skip_preprocess:
+      return
+    iou = IoUtils()
+    if not self.opt.data_dir:
+      self.opt.data_dir = tempfile.TemporaryDirectory().name
+    iou.convert_stream_to_h5(self.opt.data_path, self.opt.data_dir)
+
   def init_model(self):
     # load voca
     self.logger.info("load key from %s", pjoin(self.opt.data_dir, "keys.txt"))
@@ -46,11 +54,10 @@ class CuLDA:
     self.logger.info("number of words: %d", self.num_words)
 
     # random initialize alpha and beta
-    self.alpha = \
-      np.abs(np.random.uniform( \
-        size=(self.opt.num_topics,))).astype(np.float32)
-    self.beta = np.abs(np.random.uniform( \
-      size=(self.num_words, self.opt.num_topics))).astype(np.float32)
+    self.alpha = np.random.uniform( \
+      size=(self.opt.num_topics,)).astype(np.float32)
+    self.beta = np.random.uniform( \
+      size=(self.num_words, self.opt.num_topics)).astype(np.float32)
     self.beta /= np.sum(self.beta, axis=0)[None, :]
     self.logger.info("alpha %s, beta %s initialized",
                      self.alpha.shape, self.beta.shape)
@@ -61,3 +68,25 @@ class CuLDA:
 
     # push it to gpu
     self.obj.load_model(self.alpha, self.beta, self.grad_alpha, self.new_beta)
+
+  def train_model(self):
+    self.preprocess_data()
+    self.init_model()
+
+  def _train_Estep(self, h5f):
+    offset, size = 0, h5f["indptr"].shape[0] - 1
+    steps = (size - 1) // batch_size + 1
+    pbar = aux.Progbar(size)
+    for step in range(steps):
+      next_offset = min(size, offset + batch_size)
+      indptr = h5f["indptr"][offset:next_offset + 1]
+      beg, end = indptr[0], indptr[-1]
+      indptr -= beg
+      indices = h5f["indices"][beg:end]
+      offset = next_offset
+
+      self.obj.FeedData(indices, indptr, self.opt.num_iters_in_Estep)
+      pbar.update(offset)
+
+  def _train_Mstep(self):
+    pass

@@ -69,8 +69,8 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
   int read_lines = std::min(num_lines, remain_lines_);
   if (not read_lines) return {0, 0};
   remain_lines_ -= read_lines;
-  indices_.clear();
-  indices_.resize(read_lines);
+  cols_.clear();
+  cols_.resize(read_lines);
   indptr_.resize(read_lines);
   std::fill(indptr_.begin(), indptr_.end(), 0);
   #pragma omp parallel num_threads(num_threads)
@@ -91,27 +91,28 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
       // tokenize
       for (auto& word: line_vec) {
         if (not word_count_.count(word)) continue;
-        indices_[i].push_back(word_count_[word]);
+        cols_[i].push_back(word_count_[word]);
       }
     }
   }
   int cumsum = 0;
   for (int i = 0; i < read_lines; ++i) {
-    cumsum += indices_[i].size();
+    cumsum += cols_[i].size();
     indptr_[i] = cumsum;
   }
   return {read_lines, indptr_[read_lines - 1]};
 }
 
-void IoUtils::GetToken(int* indices, int* indptr, int offset) {
-  int n = indices_.size();
+void IoUtils::GetToken(int* rows, int* cols, int* indptr) {
+  int n = cols_.size();
   for (int i = 0; i < n; ++i) {
     int beg = i == 0? 0: indptr_[i - 1];
     int end = indptr_[i];
     for (int j = beg; j < end; ++j) {
-      indices[j] = indices_[i][j - beg];
+      rows[j] = i;
+      cols[j] = cols_[i][j - beg];
     }
-    indptr[i] = offset + indptr_[i];
+    indptr[i] = indptr_[i];
   }
 }
 

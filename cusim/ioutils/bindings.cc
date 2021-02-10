@@ -39,10 +39,11 @@ class IoUtilsBind {
     obj_.GetWordVocab(min_count, keys_path);
   }
 
-  void GetToken(py::object& indices, py::object& indptr, int offset) {
-    int_array _indices(indices);
+  void GetToken(py::object& rows, py::object& cols, py::object& indptr) {
+    int_array _rows(rows);
+    int_array _cols(cols);
     int_array _indptr(indptr);
-    obj_.GetToken(_indices.mutable_data(0), _indptr.mutable_data(0), offset);
+    obj_.GetToken(_rows.mutable_data(0), _cols.mutable_data(0), _indptr.mutable_data(0));
   }
 
  private:

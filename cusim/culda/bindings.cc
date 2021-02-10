@@ -54,17 +54,17 @@ class CuLDABind {
         _new_beta.mutable_data(0), num_words);
   }
 
-  void FeedData(py::object& indices, py::object indptr, const int num_iters) {
-    int_array _indices(indices);
+  void FeedData(py::object& cols, py::object indptr, const int num_iters) {
+    int_array _cols(cols);
     int_array _indptr(indptr);
-    auto indices_buffer = _indices.request();
+    auto cols_buffer = _cols.request();
     auto indptr_buffer = _indptr.request();
-    if (indices_buffer.ndim != 1 or indptr_buffer.ndim != 1) {
-      throw std::runtime_error("invalid indices or indptr");
+    if (cols_buffer.ndim != 1 or indptr_buffer.ndim != 1) {
+      throw std::runtime_error("invalid cols or indptr");
     }
-    int num_indices = indices_buffer.shape[0];
+    int num_cols = cols_buffer.shape[0];
     int num_indptr = indptr_buffer.shape[0];
-    obj_.FeedData(_indices.data(0), _indptr.data(0), num_indices, num_indptr, num_iters);
+    obj_.FeedData(_cols.data(0), _indptr.data(0), num_cols, num_indptr, num_iters);
   }
 
   void Pull() {
@@ -89,7 +89,7 @@ PYBIND11_PLUGIN(culda_bind) {
       py::arg("alpha"), py::arg("beta"),
       py::arg("grad_alpha"), py::arg("new_beta"))
   .def("feed_data", &CuLDABind::FeedData,
-      py::arg("indices"), py::arg("indptr"), py::arg("num_iters"))
+      py::arg("cols"), py::arg("indptr"), py::arg("num_iters"))
   .def("pull", &CuLDABind::Pull)
   .def("push", &CuLDABind::Push)
   .def("__repr__",

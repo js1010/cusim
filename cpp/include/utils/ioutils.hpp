@@ -34,12 +34,12 @@ class IoUtils {
   std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
   std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
   void GetWordVocab(int min_count, std::string keys_path);
-  void GetToken(int* indices, int* indptr, int offset);
+  void GetToken(int* rows, int* cols, int* indptr);
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
   void ParseLineImpl(std::string line, std::vector<std::string>& line_vec);
 
-  std::vector<std::vector<int>> indices_;
+  std::vector<std::vector<int>> cols_;
   std::vector<int> indptr_;
   std::mutex global_lock_;
   std::ifstream stream_fin_;

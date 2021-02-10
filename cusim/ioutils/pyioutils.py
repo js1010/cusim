@@ -23,7 +23,7 @@ class IoUtils:
     self.opt = aux.get_opt_as_proto(opt or {}, IoUtilsConfigProto)
     self.logger = aux.get_logger("ioutils", level=self.opt.py_log_level)
 
-    tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    tmp = tempfile.NamedTemporaryFile(mode='w')
     opt_content = json.dumps(aux.proto_to_dict(self.opt), indent=2)
     tmp.write(opt_content)
     tmp.close()
@@ -60,9 +60,12 @@ class IoUtils:
     pbar = aux.Progbar(full_num_lines, unit_name="line")
     processed = 0
     h5f = h5py.File(token_path, "w")
-    indices = h5f.create_dataset("indices", shape=(chunk_indices,),
-                                 maxshape=(None,), dtype=np.int32,
-                                 chunks=(chunk_indices,))
+    rows = h5f.create_dataset("rows", shape=(chunk_indices,),
+                              maxshape=(None,), dtype=np.int32,
+                              chunks=(chunk_indices,))
+    cols = h5f.create_dataset("cols", shape=(chunk_indices,),
+                              maxshape=(None,), dtype=np.int32,
+                              chunks=(chunk_indices,))
     indptr =  h5f.create_dataset("indptr", shape=(full_num_lines + 1,),
                                  dtype=np.int32, chunks=True)
     processed, offset = 1, 0
@@ -70,12 +73,15 @@ class IoUtils:
     while True:
       read_lines, data_size = self.obj.tokenize_stream(
         self.opt.chunk_lines, self.opt.num_threads)
-      _indices = np.empty(shape=(data_size,), dtype=np.int32)
+      _rows = np.empty(shape=(data_size,), dtype=np.int32)
+      _cols = np.empty(shape=(data_size,), dtype=np.int32)
       _indptr = np.empty(shape=(read_lines,), dtype=np.int32)
-      self.obj.get_token(_indices, _indptr, offset)
-      indices.resize((offset + data_size,))
-      indices[offset:offset + data_size] = _indices
-      indptr[processed:processed + read_lines] = _indptr
+      self.obj.get_token(_rows, _cols, _indptr)
+      rows.resize((offset + data_size,))
+      rows[offset:offset + data_size] = _rows + (processed - 1)
+      cols.resize((offset + data_size,))
+      cols[offset:offset + data_size] = _cols
+      indptr[processed:processed + read_lines] = _indptr + offset
       offset += data_size
       processed += read_lines
       pbar.update(processed - 1)

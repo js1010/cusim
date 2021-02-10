@@ -26,8 +26,8 @@ float Digamma(float x) {
 }
 
 __global__ void EstepKernel(
-  const int* indices, const int* indptr, 
-  const int num_indices, const int num_indptr,
+  const int* cols, const int* indptr, 
+  const int num_cols, const int num_indptr,
   const int num_words, const int num_topics, const int num_iters,
   float* gamma, float* new_gamma, float* phi,
   float* alpha, float* beta,
@@ -55,7 +55,7 @@ __global__ void EstepKernel(
 
       // compute phi from gamma
       for (int k = beg; k < end; ++k) {
-        const int w = indices[k];
+        const int w = cols[k];
         // compute phi
         for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
           _phi[l] = beta[w * num_topics + l] * expf(Digamma(_gamma[l]));

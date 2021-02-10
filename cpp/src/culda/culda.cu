@@ -61,18 +61,18 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
-void CuLDA::FeedData(const int* indices, const int* indptr, 
-    const int num_indices, const int num_indptr, const int num_iters) {
-  thrust::device_vector<int> dev_indices(num_indices);
+void CuLDA::FeedData(const int* cols, const int* indptr, 
+    const int num_cols, const int num_indptr, const int num_iters) {
+  thrust::device_vector<int> dev_cols(num_cols);
   thrust::device_vector<int> dev_indptr(num_indptr + 1);
-  thrust::copy(indices, indices + num_indices, dev_indices.begin());
+  thrust::copy(cols, cols + num_cols, dev_cols.begin());
   thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
 
   EstepKernel<<<block_cnt_, block_dim_>>>(
-    thrust::raw_pointer_cast(dev_indices.data()),
+    thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
-    num_indices, num_indptr, num_words_, num_topics_, num_iters,
+    num_cols, num_indptr, num_words_, num_topics_, num_iters,
     thrust::raw_pointer_cast(dev_gamma_.data()),
     thrust::raw_pointer_cast(dev_new_gamma_.data()),
     thrust::raw_pointer_cast(dev_phi_.data()),
