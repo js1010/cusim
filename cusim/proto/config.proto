@@ -29,4 +29,5 @@ message CuLDAConfigProto {
   optional int32 epochs = 11 [default = 10];
   optional int32 num_iters_in_e_step = 12 [default = 5];
   optional double vali_p = 13 [default = 0.2];
+  optional int32 seed = 14 [default = 777];
 }

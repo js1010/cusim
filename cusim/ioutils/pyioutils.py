@@ -23,7 +23,7 @@ class IoUtils:
     self.opt = aux.get_opt_as_proto(opt or {}, IoUtilsConfigProto)
     self.logger = aux.get_logger("ioutils", level=self.opt.py_log_level)
 
-    tmp = tempfile.NamedTemporaryFile(mode='w')
+    tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     opt_content = json.dumps(aux.proto_to_dict(self.opt), indent=2)
     tmp.write(opt_content)
     tmp.close()
@@ -49,7 +49,8 @@ class IoUtils:
     self.obj.get_word_vocab(min_count, keys_path)
 
   def convert_stream_to_h5(self, filepath, min_count, out_dir,
-                           chunk_indices=10000):
+                           chunk_indices=10000, seed=777):
+    np.random.seed(seed)
     os.makedirs(out_dir, exist_ok=True)
     keys_path = pjoin(out_dir, "keys.txt")
     token_path = pjoin(out_dir, "token.h5")
@@ -86,7 +87,7 @@ class IoUtils:
       cols[offset:offset + data_size] = _cols
       vali.resize((offset + data_size,))
       vali[offset:offset + data_size] = \
-        np.uniform(size=(data_size,)).astype(np.float32)
+        np.random.uniform(size=(data_size,)).astype(np.float32)
       indptr[processed:processed + read_lines] = _indptr + offset
       offset += data_size
       processed += read_lines

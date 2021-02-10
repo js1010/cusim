@@ -63,6 +63,7 @@ class CuLDA:
                      self.num_words, self.num_docs)
 
     # random initialize alpha and beta
+    np.random.seed(self.opt.seed)
     self.alpha = np.random.uniform( \
       size=(self.opt.num_topics,)).astype(np.float32)
     self.beta = np.random.uniform( \
