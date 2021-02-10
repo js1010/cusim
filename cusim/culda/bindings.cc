@@ -58,7 +58,7 @@ class CuLDABind {
   std::pair<float, float> FeedData(py::object& cols, py::object& indptr, py::object& vali, const int num_iters) {
     int_array _cols(cols);
     int_array _indptr(indptr);
-    bool_arrray _vali(vali);
+    bool_array _vali(vali);
     auto cols_buffer = _cols.request();
     auto indptr_buffer = _indptr.request();
     auto vali_buffer = _vali.request();
