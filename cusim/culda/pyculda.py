@@ -44,20 +44,21 @@ class CuLDA:
     if self.opt.skip_preprocess:
       return
     iou = IoUtils()
-    if not self.opt.data_dir:
-      self.opt.data_dir = tempfile.TemporaryDirectory().name
+    if not self.opt.processed_data_dir:
+      self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
     iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
-                             self.opt.data_dir)
+                             self.opt.processed_data_dir)
 
   def init_model(self):
     # load voca
-    self.logger.info("load key from %s", pjoin(self.opt.data_dir, "keys.txt"))
-    with open(pjoin(self.opt.data_dir, "keys.txt"), "rb") as fin:
+    data_dir = self.opt.processed_data_dir
+    self.logger.info("load key from %s", pjoin(data_dir, "keys.txt"))
+    with open(pjoin(data_dir, "keys.txt"), "rb") as fin:
       self.words = [line.strip() for line in fin]
     self.num_words = len(self.words)
 
     # count number of docs
-    h5f = h5py.File(pjoin(self.opt.data_dir, "token.h5"), "r")
+    h5f = h5py.File(pjoin(data_dir, "token.h5"), "r")
     self.num_docs = h5f["indptr"].shape[0] - 1
     h5f.close()
 
@@ -88,7 +89,7 @@ class CuLDA:
   def train_model(self):
     self.preprocess_data()
     self.init_model()
-    h5f = h5py.File(pjoin(self.opt.data_dir, "token.h5"), "r")
+    h5f = h5py.File(pjoin(self.opt.processed_data_dir, "token.h5"), "r")
     for epoch in range(1, self.opt.epochs + 1):
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
       self._train_e_step(h5f)
