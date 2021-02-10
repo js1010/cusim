@@ -30,7 +30,7 @@ __global__ void EstepKernel(
   const int num_cols, const int num_indptr,
   const int num_topics, const int num_iters,
   float* gamma, float* new_gamma, float* phi,
-  float* alpha, float* beta,
+  const float* alpha, const float* beta,
   float* grad_alpha, float* new_beta, float* train_losses, float* vali_losses) {
   
   // storage for block
@@ -76,12 +76,12 @@ __global__ void EstepKernel(
           __syncthreads();
         }
         if (j + 1 == num_iters) {
-          float p = ReduceSum(_phi, num_topics);
+          float p = fmaxf(EPS, ReduceSum(_phi, num_topics));
           if (threadIdx.x == 0) {
             if (_vali)
-              vali_losses[blockIdx.x] += logf(p + EPS);
+              vali_losses[blockIdx.x] += logf(p);
             else
-              train_losses[blockIdx.x] += logf(p + EPS);
+              train_losses[blockIdx.x] += logf(p);
           } 
         }
         __syncthreads();

@@ -9,6 +9,8 @@ import os
 import subprocess
 import fire
 
+import h5py
+import numpy as np
 from gensim import downloader as api
 from cusim import aux, IoUtils, CuLDA
 
@@ -43,11 +45,23 @@ def run_lda():
     "data_path": DATA_PATH,
     "data_dir": DATA_PATH2,
     # "skip_preprocess": True,
-    "c_log_level": 3,
+    # "c_log_level": 3,
   }
   lda = CuLDA(opt)
   lda.train_model()
-
+  lda.save_model("res/lda.h5")
+  h5f = h5py.File("res/lda.h5", "r")
+  beta = h5f["beta"][:]
+  for i in range(lda.opt.num_topics):
+    print("=" * 50)
+    print(f"topic {i + 1}")
+    words = np.argsort(-beta.T[i])[:10]
+    print("-" * 50)
+    for j in range(10):
+      word = lda.words[words[j]].decode("utf8")
+      prob = beta[words[j], i]
+      print(f"rank {j + 1}. word: {word}, prob: {prob}")
+  h5f.close()
 
 if __name__ == "__main__":
   fire.Fire()

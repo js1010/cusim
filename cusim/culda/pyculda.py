@@ -137,6 +137,7 @@ class CuLDA:
     self.obj.pull()
 
     # update beta
+    self.new_beta[:, :] = np.maximum(self.new_beta, EPS)
     self.beta[:, :] = self.new_beta / np.sum(self.new_beta, axis=0)[None, :]
     self.new_beta[:, :] = 0
 
@@ -151,6 +152,15 @@ class CuLDA:
     c_0 = c_nume / c_deno
     delta = (gvec - c_0) / hvec
     self.alpha -= delta
+    self.alpha[:] = np.maximum(self.alpha, EPS)
     self.grad_alpha[:,:] = 0
 
     self.obj.push()
+
+  def save_model(self, model_path):
+    self.logger.info("save model path: %s", model_path)
+    h5f = h5py.File(model_path, "w")
+    h5f.create_dataset("alpha", data=self.alpha)
+    h5f.create_dataset("beta", data=self.beta)
+    h5f.create_dataset("keys", data=np.array(self.words))
+    h5f.close()

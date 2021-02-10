@@ -37,10 +37,10 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
   int n = line.size();
   std::string element;
   for (int i = 0; i < n; ++i) {
-    if (line[i] == ' ' or line[i] == ',') {
+    if (line[i] == ' ') {
       ret.push_back(element);
       element.clear();
-    } else if (line[i] != '"') {
+    } else {
       element += std::tolower(line[i]);
     }
   }
