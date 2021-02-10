@@ -39,7 +39,7 @@ bool CuLDA::Init(std::string opt_path) {
 void CuLDA::LoadModel(float* alpha, float* beta, 
     float* grad_alpha, float* new_beta, int num_words) {
   num_words_ = num_words;
-  DEBUG("copy model({} x {})", num_topics_, num_words_);
+  DEBUG("copy model({} x {})", num_words_, num_topics_);
   dev_alpha_.resize(num_topics_);
   dev_beta_.resize(num_topics_ * num_words_);
   thrust::copy(alpha, alpha + num_topics_, dev_alpha_.begin());
@@ -49,7 +49,7 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   // resize device vector
   grad_alpha_ = grad_alpha;
   new_beta_ = new_beta;
-  dev_grad_alpha_.resize(block_cnt_ * num_topics_);
+  dev_grad_alpha_.resize(num_topics_ * block_cnt_);
   dev_new_beta_.resize(num_topics_ * num_words_);
 
   // copy to device
@@ -74,15 +74,15 @@ std::pair<float, float> CuLDA::FeedData(
   thrust::copy(cols, cols + num_cols, dev_cols.begin());
   thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
   thrust::copy(vali, vali + num_cols, dev_vali.begin());
-  
   CHECK_CUDA(cudaDeviceSynchronize());
+  DEBUG0("copy feed data to GPU memory");
 
   // run E step in GPU
   EstepKernel<<<block_cnt_, block_dim_>>>(
     thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
     thrust::raw_pointer_cast(dev_vali.data()),
-    num_cols, num_indptr, num_words_, num_topics_, num_iters,
+    num_cols, num_indptr, num_topics_, num_iters,
     thrust::raw_pointer_cast(dev_gamma_.data()),
     thrust::raw_pointer_cast(dev_new_gamma_.data()),
     thrust::raw_pointer_cast(dev_phi_.data()),
@@ -92,14 +92,15 @@ std::pair<float, float> CuLDA::FeedData(
     thrust::raw_pointer_cast(dev_new_beta_.data()),
     thrust::raw_pointer_cast(dev_train_losses.data()),
     thrust::raw_pointer_cast(dev_vali_losses.data()));
-  
   CHECK_CUDA(cudaDeviceSynchronize());
+  DEBUG0("run E step in GPU");
 
   // pull loss
   std::vector<float> train_losses(block_cnt_), vali_losses(block_cnt_);
   thrust::copy(dev_train_losses.begin(), dev_train_losses.end(), train_losses.begin());
   thrust::copy(dev_vali_losses.begin(), dev_vali_losses.end(), vali_losses.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
+  DEBUG0("pull loss values");
 
   // accumulate
   float train_loss = std::accumulate(train_losses.begin(), train_losses.end(), 0.0f);

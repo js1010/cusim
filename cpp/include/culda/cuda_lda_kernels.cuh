@@ -28,7 +28,7 @@ float Digamma(float x) {
 __global__ void EstepKernel(
   const int* cols, const int* indptr, const bool* vali,
   const int num_cols, const int num_indptr,
-  const int num_words, const int num_topics, const int num_iters,
+  const int num_topics, const int num_iters,
   float* gamma, float* new_gamma, float* phi,
   float* alpha, float* beta,
   float* grad_alpha, float* new_beta, float* train_losses, float* vali_losses) {
@@ -39,10 +39,8 @@ __global__ void EstepKernel(
   float* _phi = phi + num_topics * blockIdx.x;
   float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
 
-
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
     int beg = indptr[i], end = indptr[i + 1];
-    
     // initialize gamma
     for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
       _gamma[j] = alpha[j] + (end - beg) / num_topics;
@@ -59,7 +57,6 @@ __global__ void EstepKernel(
       for (int k = beg; k < end; ++k) {
         const int w = cols[k];
         const bool _vali = vali[k];
-
         // compute phi
         if (not _vali or j + 1 == num_iters) {
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x)

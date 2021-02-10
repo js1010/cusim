@@ -19,6 +19,8 @@ from cusim import aux, IoUtils
 from cusim.culda.culda_bind import CuLDABind
 from cusim.config_pb2 import CuLDAConfigProto
 
+EPS = 1e-10
+
 class CuLDA:
   def __init__(self, opt=None):
     self.opt = aux.get_opt_as_proto(opt or {}, CuLDAConfigProto)
@@ -77,6 +79,8 @@ class CuLDA:
     self.grad_alpha = np.zeros(shape=(block_cnt, self.opt.num_topics),
                                dtype=np.float32)
     self.new_beta = np.zeros(shape=self.beta.shape, dtype=np.float32)
+    self.logger.info("grad alpha %s, new beta %s initialized",
+                     self.grad_alpha.shape, self.new_beta.shape)
 
     # push it to gpu
     self.obj.load_model(self.alpha, self.beta, self.grad_alpha, self.new_beta)
@@ -118,10 +122,10 @@ class CuLDA:
       vali_loss_nume -= vali_loss
       vali_cnt = np.count_nonzero(vali)
       train_cnt = len(vali) - vali_cnt
-      train_loss_nume += train_cnt
-      vali_loss_nume += train_cnt
-      train_loss = train_loss_nume / train_loss_deno
-      vali_loss = vali_loss_nume / vali_loss_deno
+      train_loss_deno += train_cnt
+      vali_loss_deno += vali_cnt
+      train_loss = train_loss_nume / (train_loss_deno + EPS)
+      vali_loss = vali_loss_nume / (vali_loss_deno + EPS)
 
       # update progress bar
       pbar.update(end, values=[("train_loss", train_loss),

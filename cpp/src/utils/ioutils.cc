@@ -90,8 +90,8 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
 
       // tokenize
       for (auto& word: line_vec) {
-        if (not word_count_.count(word)) continue;
-        cols_[i].push_back(word_count_[word]);
+        if (not word_idmap_.count(word)) continue;
+        cols_[i].push_back(word_idmap_[word]);
       }
     }
   }
@@ -155,6 +155,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
 
 void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   INFO("number of raw words: {}", word_count_.size());
+  word_idmap_.clear(); word_list_.clear();
   for (auto& it: word_count_) {
     if (it.second >= min_count) {
       word_idmap_[it.first] = word_idmap_.size();

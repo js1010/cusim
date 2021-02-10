@@ -47,7 +47,7 @@ class CuLDABind {
       throw std::runtime_error("invalid grad_alpha or new_beta");
     }
 
-    int num_words = beta_buffer.shape[1];
+    int num_words = beta_buffer.shape[0];
 
     return obj_.LoadModel(_alpha.mutable_data(0),
         _beta.mutable_data(0),
@@ -67,7 +67,7 @@ class CuLDABind {
       throw std::runtime_error("invalid cols or indptr");
     }
     int num_cols = cols_buffer.shape[0];
-    int num_indptr = indptr_buffer.shape[0];
+    int num_indptr = indptr_buffer.shape[0] - 1;
     return obj_.FeedData(_cols.data(0), _indptr.data(0), _vali.data(0),
         num_cols, num_indptr, num_iters);
   }
