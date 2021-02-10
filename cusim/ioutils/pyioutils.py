@@ -66,6 +66,9 @@ class IoUtils:
     cols = h5f.create_dataset("cols", shape=(chunk_indices,),
                               maxshape=(None,), dtype=np.int32,
                               chunks=(chunk_indices,))
+    vali = h5f.create_dataset("vali", shape=(chunk_indices,),
+                              maxshape=(None,), dtype=np.float32,
+                              chunks=(chunk_indices,))
     indptr =  h5f.create_dataset("indptr", shape=(full_num_lines + 1,),
                                  dtype=np.int32, chunks=True)
     processed, offset = 1, 0
@@ -81,6 +84,9 @@ class IoUtils:
       rows[offset:offset + data_size] = _rows + (processed - 1)
       cols.resize((offset + data_size,))
       cols[offset:offset + data_size] = _cols
+      vali.resize((offset + data_size,))
+      vali[offset:offset + data_size] = \
+        np.uniform(size=(data_size,)).astype(np.float32)
       indptr[processed:processed + read_lines] = _indptr + offset
       offset += data_size
       processed += read_lines

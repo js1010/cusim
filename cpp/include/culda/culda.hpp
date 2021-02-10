@@ -64,7 +64,8 @@ class CuLDA {
   bool Init(std::string opt_path);
   void LoadModel(float* alpha, float* beta,
       float* grad_alpha, float* new_beta, const int num_words);
-  void FeedData(const int* indices, const int* indptr,
+  std::pair<float, float> FeedData(
+      const int* indices, const int* indptr, const bool* vali,
       const int num_indices, const int num_indptr, const int num_iters);
   void Pull();
   void Push();

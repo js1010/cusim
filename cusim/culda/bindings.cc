@@ -14,6 +14,7 @@ namespace py = pybind11;
 
 typedef py::array_t<float, py::array::c_style | py::array::forcecast> float_array;
 typedef py::array_t<int, py::array::c_style | py::array::forcecast> int_array;
+typedef py::array_t<bool, py::array::c_style | py::array::forcecast> bool_array;
 
 class CuLDABind {
  public:
@@ -54,17 +55,21 @@ class CuLDABind {
         _new_beta.mutable_data(0), num_words);
   }
 
-  void FeedData(py::object& cols, py::object indptr, const int num_iters) {
+  std::pair<float, float> FeedData(py::object& cols, py::object& indptr, py::object& vali, const int num_iters) {
     int_array _cols(cols);
     int_array _indptr(indptr);
+    bool_arrray _vali(vali);
     auto cols_buffer = _cols.request();
     auto indptr_buffer = _indptr.request();
-    if (cols_buffer.ndim != 1 or indptr_buffer.ndim != 1) {
+    auto vali_buffer = _vali.request();
+    if (cols_buffer.ndim != 1 or indptr_buffer.ndim != 1 or vali_buffer.ndim != 1
+        or cols_buffer.shape[0] != vali_buffer.shape[0]) {
       throw std::runtime_error("invalid cols or indptr");
     }
     int num_cols = cols_buffer.shape[0];
     int num_indptr = indptr_buffer.shape[0];
-    obj_.FeedData(_cols.data(0), _indptr.data(0), num_cols, num_indptr, num_iters);
+    return obj_.FeedData(_cols.data(0), _indptr.data(0), _vali.data(0),
+        num_cols, num_indptr, num_iters);
   }
 
   void Pull() {
@@ -93,7 +98,7 @@ PYBIND11_PLUGIN(culda_bind) {
       py::arg("alpha"), py::arg("beta"),
       py::arg("grad_alpha"), py::arg("new_beta"))
   .def("feed_data", &CuLDABind::FeedData,
-      py::arg("cols"), py::arg("indptr"), py::arg("num_iters"))
+      py::arg("cols"), py::arg("indptr"), py::arg("vali"), py::arg("num_iters"))
   .def("pull", &CuLDABind::Pull)
   .def("push", &CuLDABind::Push)
   .def("get_block_cnt", &CuLDABind::GetBlockCnt)

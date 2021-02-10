@@ -11,3 +11,4 @@ struct DeviceInfo {
 };
 
 #define WARP_SIZE 32
+#define EPS 1e-10f

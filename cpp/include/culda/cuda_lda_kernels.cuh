@@ -26,17 +26,19 @@ float Digamma(float x) {
 }
 
 __global__ void EstepKernel(
-  const int* cols, const int* indptr, 
+  const int* cols, const int* indptr, const bool* vali,
   const int num_cols, const int num_indptr,
   const int num_words, const int num_topics, const int num_iters,
   float* gamma, float* new_gamma, float* phi,
   float* alpha, float* beta,
-  float* grad_alpha, float* new_beta) {
+  float* grad_alpha, float* new_beta, float* train_losses, float* vali_losses) {
   
   // storage for block
   float* _gamma = gamma + num_topics * blockIdx.x;
   float* _new_gamma = new_gamma + num_topics * blockIdx.x;
   float* _phi = phi + num_topics * blockIdx.x;
+  float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
+
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
     int beg = indptr[i], end = indptr[i + 1];
@@ -56,18 +58,34 @@ __global__ void EstepKernel(
       // compute phi from gamma
       for (int k = beg; k < end; ++k) {
         const int w = cols[k];
+        const bool _vali = vali[k];
+
         // compute phi
-        for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
-          _phi[l] = beta[w * num_topics + l] * expf(Digamma(_gamma[l]));
-        __syncthreads();
-        
-        // normalize phi and add it to new gamma and new beta
-        float phi_sum = ReduceSum(_phi, num_topics);
-        for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
-          _phi[l] /= phi_sum;
-          _new_gamma[l] += _phi[l];
-          if (j + 1 == num_iters) 
-            new_beta[w * num_topics + l] += phi[l];
+        if (not _vali or j + 1 == num_iters) {
+          for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
+            _phi[l] = beta[w * num_topics + l] * expf(Digamma(_gamma[l]));
+          __syncthreads();
+          
+          // normalize phi and add it to new gamma and new beta
+          float phi_sum = ReduceSum(_phi, num_topics);
+          for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
+            _phi[l] /= phi_sum;
+            if (not _vali) _new_gamma[l] += _phi[l];
+            if (j + 1 == num_iters) { 
+              if (not _vali) new_beta[w * num_topics + l] += _phi[l];
+              _phi[l] *= beta[w * num_topics + l];
+            }
+          }
+          __syncthreads();
+        }
+        if (j + 1 == num_iters) {
+          float p = ReduceSum(_phi, num_topics);
+          if (threadIdx.x == 0) {
+            if (_vali)
+              vali_losses[blockIdx.x] += logf(p + EPS);
+            else
+              train_losses[blockIdx.x] += logf(p + EPS);
+          } 
         }
         __syncthreads();
       }
@@ -79,7 +97,8 @@ __global__ void EstepKernel(
     }
     float gamma_sum = ReduceSum(_gamma, num_topics);
     for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
-      grad_alpha[j] += (Digamma(_gamma[j]) - Digamma(gamma_sum));
+      _grad_alpha[j] += (Digamma(_gamma[j]) - Digamma(gamma_sum));
+
     __syncthreads();
   } 
 }

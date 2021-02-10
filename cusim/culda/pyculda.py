@@ -92,7 +92,9 @@ class CuLDA:
 
   def _train_e_step(self, h5f):
     offset, size = 0, h5f["cols"].shape[0]
-    pbar = aux.Progbar(size)
+    pbar = aux.Progbar(size, stateful_metrics=["train_loss", "vali_loss"])
+    train_loss_nume, train_loss_deno = 0, 0
+    vali_loss_nume, vali_loss_deno = 0, 0
     while True:
       target = h5f["indptr"][offset] + self.opt.batch_size
       if target < size:
@@ -103,10 +105,26 @@ class CuLDA:
       beg, end = indptr[0], indptr[-1]
       indptr -= beg
       cols = h5f["cols"][beg:end]
+      vali = (h5f["vali"][beg:end] < self.opt.vali_p).astype(np.bool)
       offset = next_offset
 
-      self.obj.FeedData(cols, indptr, self.opt.num_iters_in_e_step)
-      pbar.update(end)
+      # call cuda kernel
+      train_loss, vali_loss = \
+        self.obj.FeedData(cols, indptr, vali, self.opt.num_iters_in_e_step)
+
+      # accumulate loss
+      train_loss_nume -= train_loss
+      vali_loss_nume -= vali_loss
+      vali_cnt = np.count_nonzero(vali)
+      train_cnt = len(vali) - vali_cnt
+      train_loss_nume += train_cnt
+      vali_loss_nume += train_cnt
+      train_loss = train_loss_nume / train_loss_deno
+      vali_loss = vali_loss_nume / vali_loss_deno
+
+      # update progress bar
+      pbar.update(end, values=[("train_loss", train_loss),
+                               ("vali_loss", vali_loss)])
       if end == size:
         break
 

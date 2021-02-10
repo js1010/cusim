@@ -61,17 +61,27 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
-void CuLDA::FeedData(const int* cols, const int* indptr, 
+std::pair<float, float> CuLDA::FeedData(
+    const int* cols, const int* indptr, const bool* vali,
     const int num_cols, const int num_indptr, const int num_iters) {
+  
+  // copy feed data to GPU memory
   thrust::device_vector<int> dev_cols(num_cols);
   thrust::device_vector<int> dev_indptr(num_indptr + 1);
+  thrust::device_vector<bool> dev_vali(num_cols);
+  thrust::device_vector<float> dev_train_losses(block_cnt_, 0.0f);
+  thrust::device_vector<float> dev_vali_losses(block_cnt_, 0.0f);
   thrust::copy(cols, cols + num_cols, dev_cols.begin());
   thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
+  thrust::copy(vali, vali + num_cols, dev_vali.begin());
+  
   CHECK_CUDA(cudaDeviceSynchronize());
 
+  // run E step in GPU
   EstepKernel<<<block_cnt_, block_dim_>>>(
     thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
+    thrust::raw_pointer_cast(dev_vali.data()),
     num_cols, num_indptr, num_words_, num_topics_, num_iters,
     thrust::raw_pointer_cast(dev_gamma_.data()),
     thrust::raw_pointer_cast(dev_new_gamma_.data()),
@@ -79,9 +89,22 @@ void CuLDA::FeedData(const int* cols, const int* indptr,
     thrust::raw_pointer_cast(dev_alpha_.data()),
     thrust::raw_pointer_cast(dev_beta_.data()),
     thrust::raw_pointer_cast(dev_grad_alpha_.data()),
-    thrust::raw_pointer_cast(dev_new_beta_.data()));
+    thrust::raw_pointer_cast(dev_new_beta_.data()),
+    thrust::raw_pointer_cast(dev_train_losses.data()),
+    thrust::raw_pointer_cast(dev_vali_losses.data()));
   
   CHECK_CUDA(cudaDeviceSynchronize());
+
+  // pull loss
+  std::vector<float> train_losses(block_cnt_), vali_losses(block_cnt_);
+  thrust::copy(dev_train_losses.begin(), dev_train_losses.end(), train_losses.begin());
+  thrust::copy(dev_vali_losses.begin(), dev_vali_losses.end(), vali_losses.begin());
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  // accumulate
+  float train_loss = std::accumulate(train_losses.begin(), train_losses.end(), 0.0f);
+  float vali_loss = std::accumulate(vali_losses.begin(), vali_losses.end(), 0.0f);
+  return {train_loss, vali_loss};
 }
 
 void CuLDA::Pull() {
