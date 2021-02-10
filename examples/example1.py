@@ -40,10 +40,11 @@ def run_io():
 
 def run_lda():
   opt = {
+    "data_path": DATA_PATH,
     "data_dir": DATA_PATH2,
   }
   lda = CuLDA(opt)
-  lda.init_model()
+  lda.train_model()
 
 
 if __name__ == "__main__":

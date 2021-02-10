@@ -74,7 +74,7 @@ class CuLDA:
 
     # zero initialize grad alpha and new beta
     block_cnt = self.obj.get_block_cnt()
-    self.grad_alpha = np.zeros(shape=(block_cnt, self.num_topics),
+    self.grad_alpha = np.zeros(shape=(block_cnt, self.opt.num_topics),
                                dtype=np.float32)
     self.new_beta = np.zeros(shape=self.beta.shape, dtype=np.float32)
 
@@ -111,7 +111,7 @@ class CuLDA:
 
       # call cuda kernel
       train_loss, vali_loss = \
-        self.obj.FeedData(cols, indptr, vali, self.opt.num_iters_in_e_step)
+        self.obj.feed_data(cols, indptr, vali, self.opt.num_iters_in_e_step)
 
       # accumulate loss
       train_loss_nume -= train_loss
