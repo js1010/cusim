@@ -11,10 +11,11 @@ from os.path import join as pjoin
 import json
 import tempfile
 
-# import h5py
+import h5py
 import numpy as np
+from scipy.special import polygamma as pg
 
-from cusim import aux
+from cusim import aux, IoUtils
 from cusim.culda.culda_bind import CuLDABind
 from cusim.config_pb2 import CuLDAConfigProto
 
@@ -33,7 +34,7 @@ class CuLDA:
     assert self.obj.init(bytes(tmp.name, "utf8")), f"failed to load {tmp.name}"
     os.remove(tmp.name)
 
-    self.words, self.num_words = None, None
+    self.words, self.num_words, self.num_docs = None, None, None
     self.alpha, self.beta, self.grad_alpha, self.new_beta = \
       None, None, None, None
 
@@ -43,7 +44,8 @@ class CuLDA:
     iou = IoUtils()
     if not self.opt.data_dir:
       self.opt.data_dir = tempfile.TemporaryDirectory().name
-    iou.convert_stream_to_h5(self.opt.data_path, self.opt.data_dir)
+    iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
+                             self.opt.data_dir)
 
   def init_model(self):
     # load voca
@@ -51,7 +53,14 @@ class CuLDA:
     with open(pjoin(self.opt.data_dir, "keys.txt"), "rb") as fin:
       self.words = [line.strip() for line in fin]
     self.num_words = len(self.words)
-    self.logger.info("number of words: %d", self.num_words)
+
+    # count number of docs
+    h5f = h5py.File(pjoin(self.opt.data_dir, "token.h5"), "r")
+    self.num_docs = h5f["indptr"].shape[0] - 1
+    h5f.close()
+
+    self.logger.info("number of words: %d, docs: %d",
+                     self.num_words, self.num_docs)
 
     # random initialize alpha and beta
     self.alpha = np.random.uniform( \
@@ -63,7 +72,9 @@ class CuLDA:
                      self.alpha.shape, self.beta.shape)
 
     # zero initialize grad alpha and new beta
-    self.grad_alpha = np.zeros(shape=self.alpha.shape, dtype=np.float32)
+    block_cnt = self.obj.get_block_cnt()
+    self.grad_alpha = np.zeros(shape=(block_cnt, self.num_topics),
+                               dtype=np.float32)
     self.new_beta = np.zeros(shape=self.beta.shape, dtype=np.float32)
 
     # push it to gpu
@@ -72,21 +83,51 @@ class CuLDA:
   def train_model(self):
     self.preprocess_data()
     self.init_model()
+    h5f = h5py.File(pjoin(self.opt.data_dir, "token.h5"), "r")
+    for epoch in range(1, self.opt.epochs + 1):
+      self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
+      self._train_e_step(h5f)
+      self._train_m_step()
+    h5f.close()
 
-  def _train_Estep(self, h5f):
-    offset, size = 0, h5f["indptr"].shape[0] - 1
-    steps = (size - 1) // batch_size + 1
+  def _train_e_step(self, h5f):
+    offset, size = 0, h5f["cols"].shape[0]
     pbar = aux.Progbar(size)
-    for step in range(steps):
-      next_offset = min(size, offset + batch_size)
+    while True:
+      target = h5f["indptr"][offset] + self.opt.batch_size
+      if target < size:
+        next_offset = h5f["rows"][target]
+      else:
+        next_offset = h5f["indptr"].shape[0] - 1
       indptr = h5f["indptr"][offset:next_offset + 1]
       beg, end = indptr[0], indptr[-1]
       indptr -= beg
-      indices = h5f["indices"][beg:end]
+      cols = h5f["cols"][beg:end]
       offset = next_offset
 
-      self.obj.FeedData(indices, indptr, self.opt.num_iters_in_Estep)
-      pbar.update(offset)
+      self.obj.FeedData(cols, indptr, self.opt.num_iters_in_e_step)
+      pbar.update(end)
+      if end == size:
+        break
 
-  def _train_Mstep(self):
-    pass
+  def _train_m_step(self):
+    self.obj.pull()
+
+    # update beta
+    self.beta[:, :] = self.new_beta / np.sum(self.new_beta, axis=0)[None, :]
+    self.new_beta[:, :] = 0
+
+    # update alpha
+    alpha_sum = np.sum(self.alpha)
+    gvec = np.sum(self.grad_alpha, axis=0)
+    gvec += self.num_docs * (pg(0, alpha_sum) - pg(0, self.alpha))
+    hvec = self.num_docs * pg(1, self.alpha)
+    z_0 = pg(1, alpha_sum)
+    c_nume = np.sum(gvec / hvec)
+    c_deno = 1 / z_0 + np.sum(1 / hvec)
+    c_0 = c_nume / c_deno
+    delta = (gvec - c_0) / hvec
+    self.alpha -= delta
+    self.grad_alpha[:,:] = 0
+
+    self.obj.push()

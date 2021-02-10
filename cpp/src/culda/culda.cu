@@ -49,11 +49,11 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   // resize device vector
   grad_alpha_ = grad_alpha;
   new_beta_ = new_beta;
-  dev_grad_alpha_.resize(num_topics_);
+  dev_grad_alpha_.resize(block_cnt_ * num_topics_);
   dev_new_beta_.resize(num_topics_ * num_words_);
 
   // copy to device
-  thrust::copy(grad_alpha_, grad_alpha_ + num_topics_, dev_grad_alpha_.begin());
+  thrust::copy(grad_alpha_, grad_alpha_ + block_cnt_ * num_topics_, dev_grad_alpha_.begin());
   thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
   dev_gamma_.resize(num_topics_ * block_cnt_);
   dev_new_gamma_.resize(num_topics_ * block_cnt_);
@@ -92,10 +92,14 @@ void CuLDA::Pull() {
 
 void CuLDA::Push() {
   thrust::copy(alpha_, alpha_ + num_topics_, dev_alpha_.begin());
-  thrust::copy(grad_alpha_, grad_alpha_ + num_topics_, dev_grad_alpha_.begin());
+  thrust::copy(grad_alpha_, grad_alpha_ + block_cnt_ * num_topics_, dev_grad_alpha_.begin());
   thrust::copy(beta_, beta_ + num_words_ * num_topics_, dev_beta_.begin());
   thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
+}
+
+int CuLDA::GetBlockCnt() {
+  return block_cnt_;
 }
 
 }  // namespace cusim

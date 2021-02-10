@@ -68,6 +68,7 @@ class CuLDA {
       const int num_indices, const int num_indptr, const int num_iters);
   void Pull();
   void Push();
+  int GetBlockCnt();
  private:
   DeviceInfo dev_info_;
   json11::Json opt_;

@@ -40,9 +40,9 @@ class CuLDABind {
     float_array _new_beta(new_beta);
     auto grad_alpha_buffer = _grad_alpha.request();
     auto new_beta_buffer = _new_beta.request();
-    if (grad_alpha_buffer.ndim != 1 or
+    if (grad_alpha_buffer.ndim != 2 or
         new_beta_buffer.ndim != 2 or
-        grad_alpha_buffer.shape[0] != new_beta_buffer.shape[1]) {
+        grad_alpha_buffer.shape[1] != new_beta_buffer.shape[1]) {
       throw std::runtime_error("invalid grad_alpha or new_beta");
     }
 
@@ -75,6 +75,10 @@ class CuLDABind {
     obj_.Push();
   }
 
+  int GetBlockCnt() {
+    return obj_.GetBlockCnt();
+  }
+
  private:
   cusim::CuLDA obj_;
 };
@@ -92,6 +96,7 @@ PYBIND11_PLUGIN(culda_bind) {
       py::arg("cols"), py::arg("indptr"), py::arg("num_iters"))
   .def("pull", &CuLDABind::Pull)
   .def("push", &CuLDABind::Push)
+  .def("get_block_cnt", &CuLDABind::GetBlockCnt)
   .def("__repr__",
   [](const CuLDABind &a) {
     return "<CuLDABind>";
