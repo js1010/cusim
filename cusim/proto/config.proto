@@ -1,0 +1,33 @@
+// Copyright (c) 2020 Jisang Yoon
+// All rights reserved.
+//
+// This source code is licensed under the Apache 2.0 license found in the
+// LICENSE file in the root directory of this source tree.
+
+syntax = "proto2";
+
+message IoUtilsConfigProto {
+  optional int32 py_log_level = 1 [default = 2];
+  optional int32 c_log_level = 2 [default = 2];
+  optional int32 chunk_lines = 3 [default = 100000];
+  optional int32 num_threads = 4 [default = 4];
+}
+
+message CuLDAConfigProto {
+  required string data_path = 7;
+
+  optional int32 py_log_level = 1 [default = 2];
+  optional int32 c_log_level = 2 [default = 2];
+
+  optional int32 num_topics = 3 [default = 10];
+  optional int32 block_dim = 4 [default = 32];
+  optional int32 hyper_threads = 5 [default = 10];
+  optional string processed_data_dir = 6;
+  optional bool skip_preprocess = 8;
+  optional int32 word_min_count = 9 [default = 5];
+  optional int32 batch_size = 10 [default = 100000];
+  optional int32 epochs = 11 [default = 10];
+  optional int32 num_iters_in_e_step = 12 [default = 5];
+  optional double vali_p = 13 [default = 0.2];
+  optional int32 seed = 14 [default = 777];
+}
