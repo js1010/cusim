@@ -70,6 +70,7 @@ class CuLDA {
   void Pull();
   void Push();
   int GetBlockCnt();
+
  private:
   DeviceInfo dev_info_;
   json11::Json opt_;
@@ -77,6 +78,8 @@ class CuLDA {
   thrust::device_vector<float> dev_alpha_, dev_beta_;
   thrust::device_vector<float> dev_grad_alpha_, dev_new_beta_;
   thrust::device_vector<float> dev_gamma_, dev_new_gamma_, dev_phi_;
+  thrust::device_vector<int> dev_mutex_;
+
   float *alpha_, *beta_, *grad_alpha_, *new_beta_;
   int block_cnt_, block_dim_;
   int num_topics_, num_words_;

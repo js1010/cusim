@@ -31,7 +31,8 @@ __global__ void EstepKernel(
   const int num_topics, const int num_iters,
   float* gamma, float* new_gamma, float* phi,
   const float* alpha, const float* beta,
-  float* grad_alpha, float* new_beta, float* train_losses, float* vali_losses) {
+  float* grad_alpha, float* new_beta, 
+  float* train_losses, float* vali_losses, int* mutex) {
   
   // storage for block
   float* _gamma = gamma + num_topics * blockIdx.x;
@@ -57,6 +58,7 @@ __global__ void EstepKernel(
       for (int k = beg; k < end; ++k) {
         const int w = cols[k];
         const bool _vali = vali[k];
+        
         // compute phi
         if (not _vali or j + 1 == num_iters) {
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
@@ -65,17 +67,33 @@ __global__ void EstepKernel(
           
           // normalize phi and add it to new gamma and new beta
           float phi_sum = ReduceSum(_phi, num_topics);
+
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             _phi[l] /= phi_sum;
             if (not _vali) _new_gamma[l] += _phi[l];
+          }
+          __syncthreads();
+        }
+        
+        if (j + 1 == num_iters) {
+          // write access of w th vector of new_beta 
+          if (threadIdx.x == 0) {
+            while (atomicCAS(&mutex[w], 0, 1)) {}
+          } 
+
+          __syncthreads();
+          for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             if (j + 1 == num_iters) { 
               if (not _vali) new_beta[w * num_topics + l] += _phi[l];
               _phi[l] *= beta[w * num_topics + l];
             }
           }
           __syncthreads();
-        }
-        if (j + 1 == num_iters) {
+
+          // release lock
+          if (threadIdx.x == 0) mutex[w] = 0;
+          __syncthreads();
+
           float p = fmaxf(EPS, ReduceSum(_phi, num_topics));
           if (threadIdx.x == 0) {
             if (_vali)

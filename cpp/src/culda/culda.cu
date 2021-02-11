@@ -51,13 +51,18 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   new_beta_ = new_beta;
   dev_grad_alpha_.resize(num_topics_ * block_cnt_);
   dev_new_beta_.resize(num_topics_ * num_words_);
-
   // copy to device
   thrust::copy(grad_alpha_, grad_alpha_ + block_cnt_ * num_topics_, dev_grad_alpha_.begin());
   thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
   dev_gamma_.resize(num_topics_ * block_cnt_);
   dev_new_gamma_.resize(num_topics_ * block_cnt_);
   dev_phi_.resize(num_topics_ * block_cnt_);
+  
+  // set mutex
+  dev_mutex_.resize(num_words_);
+  std::vector<int> host_mutex(num_words_, 0);
+  thrust::copy(host_mutex.begin(), host_mutex.end(), dev_mutex_.begin());
+  
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
@@ -91,7 +96,8 @@ std::pair<float, float> CuLDA::FeedData(
     thrust::raw_pointer_cast(dev_grad_alpha_.data()),
     thrust::raw_pointer_cast(dev_new_beta_.data()),
     thrust::raw_pointer_cast(dev_train_losses.data()),
-    thrust::raw_pointer_cast(dev_vali_losses.data()));
+    thrust::raw_pointer_cast(dev_vali_losses.data()),
+    thrust::raw_pointer_cast(dev_mutex_.data()));
   CHECK_CUDA(cudaDeviceSynchronize());
   DEBUG0("run E step in GPU");
 

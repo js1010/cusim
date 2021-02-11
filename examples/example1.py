@@ -46,6 +46,7 @@ def run_lda():
   opt = {
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
+    "skip_preprocess":True,
   }
   lda = CuLDA(opt)
   lda.train_model()
