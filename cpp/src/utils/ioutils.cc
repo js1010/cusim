@@ -3,7 +3,7 @@
 //
 // This source code is licensed under the Apache 2.0 license found in the
 // LICENSE file in the root directory of this source tree.
-#include "ioutils.hpp"
+#include "utils/ioutils.hpp"
 
 namespace cusim {
 
@@ -37,10 +37,10 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
   int n = line.size();
   std::string element;
   for (int i = 0; i < n; ++i) {
-    if (line[i] == ' ' or line[i] == ',') {
+    if (line[i] == ' ') {
       ret.push_back(element);
       element.clear();
-    } else if (line[i] != '"') {
+    } else {
       element += std::tolower(line[i]);
     }
   }
@@ -69,8 +69,8 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
   int read_lines = std::min(num_lines, remain_lines_);
   if (not read_lines) return {0, 0};
   remain_lines_ -= read_lines;
-  indices_.clear();
-  indices_.resize(read_lines);
+  cols_.clear();
+  cols_.resize(read_lines);
   indptr_.resize(read_lines);
   std::fill(indptr_.begin(), indptr_.end(), 0);
   #pragma omp parallel num_threads(num_threads)
@@ -90,28 +90,29 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
 
       // tokenize
       for (auto& word: line_vec) {
-        if (not word_count_.count(word)) continue;
-        indices_[i].push_back(word_count_[word]);
+        if (not word_idmap_.count(word)) continue;
+        cols_[i].push_back(word_idmap_[word]);
       }
     }
   }
   int cumsum = 0;
   for (int i = 0; i < read_lines; ++i) {
-    cumsum += indices_[i].size();
+    cumsum += cols_[i].size();
     indptr_[i] = cumsum;
   }
   return {read_lines, indptr_[read_lines - 1]};
 }
 
-void IoUtils::GetToken(int* indices, int* indptr, int offset) {
-  int n = indices_.size();
+void IoUtils::GetToken(int* rows, int* cols, int* indptr) {
+  int n = cols_.size();
   for (int i = 0; i < n; ++i) {
     int beg = i == 0? 0: indptr_[i - 1];
     int end = indptr_[i];
     for (int j = beg; j < end; ++j) {
-      indices[j] = indices_[i][j - beg];
+      rows[j] = i;
+      cols[j] = cols_[i][j - beg];
     }
-    indptr[i] = offset + indptr_[i];
+    indptr[i] = indptr_[i];
   }
 }
 
@@ -154,6 +155,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
 
 void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   INFO("number of raw words: {}", word_count_.size());
+  word_idmap_.clear(); word_list_.clear();
   for (auto& it: word_count_) {
     if (it.second >= min_count) {
       word_idmap_[it.first] = word_idmap_.size();
@@ -165,11 +167,9 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   // write keys to csv file
   std::ofstream fout(keys_path.c_str());
   INFO("dump keys to {}", keys_path);
-  std::string header = "index,key\n";
-  fout.write(header.c_str(), header.size());
   int n = word_list_.size();
   for (int i = 0; i < n; ++i) {
-    std::string line = std::to_string(i) + ",\"" + word_list_[i] + "\"\n";
+    std::string line = word_list_[i] + "\n";
     fout.write(line.c_str(), line.size());
   }
   fout.close();
