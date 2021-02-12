@@ -5,7 +5,7 @@
 // LICENSE file in the root directory of this source tree.
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
-#include "w2v/cuda_w2v_base_kernels.cuh"
+#include "cuw2v/cuda_w2v_base_kernels.cuh"
 
 using thrust::random::default_random_engine;
 using thrust::random::uniform_int_distribution;
@@ -15,17 +15,17 @@ namespace cusim {
 __global__ void W2VNegSgKernel(
   const int* cols, const int* indptr, const int window,
   const int* random_table, const int random_size, default_random_engine* rngs,
-  const int num_indptr, const int num_dims, const int neg,
+  const int num_indptr, const int num_dims, const int neg, const int window_size,
   float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const float lr) {
   
   default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
-  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
-  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
-  static __shared__ int reduced_windows;
-  static __shared__ int neg_word;
+  uniform_int_distribution<int> dist_neg(0, random_size - 1);
+  uniform_int_distribution<int> dist_window(0, window_size - 1);
+  __shared__ int reduced_windows;
+  __shared__ int neg_word;
   extern __shared__ float shared_memory[];
   float* grad = &shared_memory[0];
 
@@ -45,8 +45,8 @@ __global__ void W2VNegSgKernel(
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
         PositiveFeedback(_emb_in, emb_out + num_dims * cols[k], 
-            grad, _loss_nume, _loss_deno, num_dims, lr)
-        if (int l = 0; l < neg; ++l) {
+            grad, _loss_nume, _loss_deno, num_dims, lr);
+        for (int l = 0; l < neg; ++l) {
           if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
           __syncthreads();
           NegativeFeedback(_emb_in, emb_out + num_dims * neg_word, 
@@ -66,7 +66,7 @@ __global__ void W2VNegSgKernel(
 __global__ void W2VNegCbowKernel(
   const int* cols, const int* indptr, const int window,
   const int* random_table, const int random_size, default_random_engine* rngs,
-  const int num_indptr, const int num_dims, const int neg,
+  const int num_indptr, const int num_dims, const int neg, const int window_size, 
   float* emb_in, float* emb_out, 
   float* loss_nume, float* loss_deno, const bool use_mean, const float lr) {
   
@@ -74,8 +74,8 @@ __global__ void W2VNegCbowKernel(
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
-  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
-  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
+  uniform_int_distribution<int> dist_neg(0, random_size - 1);
+  uniform_int_distribution<int> dist_window(0, window_size - 1);
   static __shared__ int reduced_windows;
   static __shared__ int neg_word;
   extern __shared__ float shared_memory[];
@@ -114,13 +114,13 @@ __global__ void W2VNegCbowKernel(
       __syncthreads();
       
       PositiveFeedback(cbow, emb_out + num_dims * cols[j], grad,
-          loss_nume, loss_deno, num_dims, lr);
+          _loss_nume, _loss_deno, num_dims, lr);
       __syncthreads();
       
       // update negative feedback
       for (int k = 0; k < neg; ++k){
         if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
-        __syncthredas();
+        __syncthreads();
         NegativeFeedback(cbow, emb_out + num_dims * neg_word, 
             grad, _loss_nume, _loss_deno, num_dims, lr);
       }

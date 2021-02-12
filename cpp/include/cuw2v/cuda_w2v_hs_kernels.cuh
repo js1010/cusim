@@ -5,23 +5,24 @@
 // LICENSE file in the root directory of this source tree.
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
-#include "w2v/cuda_w2v_base_kernels.cuh"
+#include "cuw2v/cuda_w2v_base_kernels.cuh"
 
-using thrust::random::default_random_engine;
-using thrust::random::uniform_int_distribution;
 
 namespace cusim {
 
 __global__ void W2VHsSgKernel(
   const int* cols, const int* indptr, const int window,
   const bool* codes, const int* points, const int* hs_indptr,
-  const int num_indptr, const int num_dims,
+  const int num_indptr, const int num_dims, const int window_size,
+  default_random_engine* rngs,
   float* emb_in, float* emb_out, 
   float* loss_nume, float* loss_deno, const float lr) {
   
+  default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
+  uniform_int_distribution<int> dist_window(0, window_size - 1);
   static __shared__ int reduced_windows;
   extern __shared__ float shared_memory[];
   float* grad = &shared_memory[0];
@@ -43,7 +44,7 @@ __global__ void W2VHsSgKernel(
         if (k == j) continue;
         int beg3 = hs_indptr[cols[k]];
         int end3 = hs_indptr[cols[k] + 1];
-        if (int l = beg3; l < end3; ++l) {
+        for (int l = beg3; l < end3; ++l) {
           if (codes[l]) {
             PositiveFeedback(_emb_in, emb_out + num_dims * points[l],
                 grad, _loss_nume, _loss_deno, num_dims, lr);
@@ -66,14 +67,16 @@ __global__ void W2VHsSgKernel(
 __global__ void W2VHsCbowKernel(
   const int* cols, const int* indptr, const int window,
   const bool* codes, const int* points, const int* hs_indptr,
-  const int num_indptr, const int num_dims, const int neg,
+  const int num_indptr, const int num_dims, const int window_size, default_random_engine* rngs,
   float* emb_in, float* emb_out, 
   float* loss_nume, float* loss_deno, 
   const bool use_mean, const float lr) {
   
+  default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
+  uniform_int_distribution<int> dist_window(0, window_size - 1);
   static __shared__ int reduced_windows;
   extern __shared__ float shared_memory[];
   float* grad = &shared_memory[0];
@@ -110,9 +113,9 @@ __global__ void W2VHsCbowKernel(
       }
       __syncthreads();
        
-      int beg3 = hs_indptr[cols[k]];
-      int end3 = hs_indptr[cols[k] + 1];
-      if (int k = beg3; k < end3; ++k) {
+      int beg3 = hs_indptr[cols[j]];
+      int end3 = hs_indptr[cols[j] + 1];
+      for (int k = beg3; k < end3; ++k) {
         if (codes[k]) {
           PositiveFeedback(cbow, emb_out + num_dims * points[k],
               grad, _loss_nume, _loss_deno, num_dims, lr);

@@ -32,6 +32,7 @@
 
 namespace cusim {
 
+bool CompareIndex(int lhs, int rhs);
 
 struct HuffmanTreeNode {
   float count;
@@ -51,7 +52,11 @@ class CuW2V {
   bool Init(std::string opt_path);
   void LoadModel(float* emb_in, float* emb_out);
   void BuildHuffmanTree(const float* word_count, const int num_words);
+  void BuildRandomTable(const float* word_count, const int num_words,
+      const int table_size, const int num_threads);
   int GetBlockCnt();
+  float FeedData(const int* cols, const int* indptr,
+      const int num_cols, const int num_indptr);
 
  private:
   DeviceInfo dev_info_;
@@ -64,17 +69,17 @@ class CuW2V {
 
   // variables to construct huffman tree
   int max_depth_;
-  std::vector<std::vector<bool>> codes_;
-  std::vector<std::vector<int>> points_;
   thrust::device_vector<float> dev_codes_;
-  thrust::device_vector<int> dev_points_, dev_indptr_;
+  thrust::device_vector<int> dev_points_, dev_hs_indptr_;
 
-
+  // related to negative sampling / hierarchical softmax and skip gram / cbow
   bool sg_;
   int neg_;
 
-  // mutex to handle concurrent model update
-  thrust::device_vector<int> dev_mutex_in_, dev_mutex_out_;
+  // variables to construct random table
+  thrust::device_vector<int> dev_random_table_;
+  int table_size_, table_seed_;
+  std::mt19937 table_rng_;
 };
 
 } // namespace cusim
