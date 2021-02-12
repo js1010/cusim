@@ -153,7 +153,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
   return {read_lines, word_count_.size()};
 }
 
-void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
+void IoUtils::GetWordVocab(int min_count, std::string keys_path, std::string count_path) {
   INFO("number of raw words: {}", word_count_.size());
   word_idmap_.clear(); word_list_.clear();
   for (auto& it: word_count_) {
@@ -164,13 +164,16 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path) {
   }
   INFO("number of words after filtering: {}", word_list_.size());
 
-  // write keys to csv file
-  std::ofstream fout(keys_path.c_str());
+  // write keys and count to csv file
+  std::ofstream fout1(keys_path.c_str());
+  std::ofstream fout2(count_path.c_str());
   INFO("dump keys to {}", keys_path);
   int n = word_list_.size();
   for (int i = 0; i < n; ++i) {
     std::string line = word_list_[i] + "\n";
-    fout.write(line.c_str(), line.size());
+    fout1.write(line.c_str(), line.size());
+    line = std::to_string(word_count_[word_list_[i]]) + "\n";
+    fout2.write(line.c_str(), line.size());
   }
   fout.close();
 }

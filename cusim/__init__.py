@@ -5,3 +5,4 @@
 # LICENSE file in the root directory of this source tree.
 from cusim.ioutils import IoUtils
 from cusim.culda import CuLDA
+from cusim.cuw2v import CuW2V

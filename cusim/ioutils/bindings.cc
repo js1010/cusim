@@ -35,8 +35,8 @@ class IoUtilsBind {
     return obj_.TokenizeStream(num_lines, num_threads);
   }
 
-  void GetWordVocab(int min_count, std::string keys_path) {
-    obj_.GetWordVocab(min_count, keys_path);
+  void GetWordVocab(int min_count, std::string keys_path, std::string count_path) {
+    obj_.GetWordVocab(min_count, keys_path, count_path);
   }
 
   void GetToken(py::object& rows, py::object& cols, py::object& indptr) {
@@ -62,7 +62,7 @@ PYBIND11_PLUGIN(ioutils_bind) {
   .def("tokenize_stream", &IoUtilsBind::TokenizeStream,
       py::arg("num_lines"), py::arg("num_threads"))
   .def("get_word_vocab", &IoUtilsBind::GetWordVocab,
-      py::arg("min_count"), py::arg("keys_path"))
+      py::arg("min_count"), py::arg("keys_path"), py::Arg("count_path"))
   .def("get_token", &IoUtilsBind::GetToken,
       py::arg("indices"), py::arg("indptr"), py::arg("offset"))
   .def("__repr__",

@@ -44,7 +44,7 @@ bool CuW2V::Init(std::string opt_path) {
   lr_ = opt_["lr"].number_value();
 
   // if zero, we will use hierarchical softmax
-  neg_ = opt_["negative_sampling"].int_value(); 
+  neg_ = opt_["neg"].int_value(); 
   
   // random seed 
   table_seed_ = opt_["table_seed"].int_value();

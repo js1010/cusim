@@ -98,6 +98,21 @@ extensions = [
               "cpp/include/", np.get_include(), pybind11.get_include(),
               pybind11.get_include(True), CUDA['include'],
               "3rd/json11", "3rd/spdlog/include"]),
+  Extension("cusim.cuw2v.cuw2v_bind",
+            sources= util_srcs + [ \
+              "cpp/src/cuw2v/cuw2v.cu",
+              "cusim/cuw2v/bindings.cc",
+              "3rd/json11/json11.cpp"],
+            language="c++",
+            extra_compile_args=extra_compile_args,
+            extra_link_args=["-fopenmp"],
+            library_dirs=[CUDA['lib64']],
+            libraries=['cudart', 'cublas', 'curand'],
+            extra_objects=[],
+            include_dirs=[ \
+              "cpp/include/", np.get_include(), pybind11.get_include(),
+              pybind11.get_include(True), CUDA['include'],
+              "3rd/json11", "3rd/spdlog/include"]),
 ]
 
 

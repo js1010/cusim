@@ -33,7 +33,7 @@ class IoUtils {
   int LoadStreamFile(std::string filepath);
   std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
   std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
-  void GetWordVocab(int min_count, std::string keys_path);
+  void GetWordVocab(int min_count, std::string keys_path, std::string count_path);
   void GetToken(int* rows, int* cols, int* indptr);
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);

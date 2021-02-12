@@ -31,3 +31,35 @@ message CuLDAConfigProto {
   optional double vali_p = 13 [default = 0.2];
   optional int32 seed = 14 [default = 777];
 }
+
+message CuW2VConfigProto {
+  required string data_path = 7;
+
+  optional int32 py_log_level = 1 [default = 2];
+  optional int32 c_log_level = 2 [default = 2];
+
+  optional int32 num_dims = 3 [default = 50];
+  optional int32 block_dim = 4 [default = 32];
+  optional int32 hyper_threads = 5 [default = 10];
+  optional string processed_data_dir = 6;
+  optional bool skip_preprocess = 8;
+  optional int32 word_min_count = 9 [default = 5];
+  optional int32 batch_size = 10 [default = 100000];
+  optional int32 epochs = 11 [default = 10];
+
+  // seed fields
+  optional int32 seed = 14 [default = 777];
+  optional int32 table_seed = 15 [default = 777];
+  optional int32 cuda_seed = 16 [default = 777];
+  optional int32 random_size = 17 [default = 1000000];
+
+  optional int32 neg = 17 [default = 10];
+  // as recommended in w2v paper
+  optional double count_power = 18 [default = 0.75];
+  optional bool skip_gram = 19 [default = true];
+  optional bool use_mean = 20 [default = true];
+  optional double lr = 21 [default = 0.001];
+  optional int32 window_size = 22 [default = 5];
+
+
+}
