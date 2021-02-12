@@ -30,6 +30,8 @@
 #include "utils/log.hpp"
 #include "utils/types.hpp"
 
+using thrust::random::default_random_engine;
+
 namespace cusim {
 
 bool CompareIndex(int lhs, int rhs);
@@ -55,7 +57,7 @@ class CuW2V {
   void BuildRandomTable(const float* word_count, const int num_words,
       const int table_size, const int num_threads);
   int GetBlockCnt();
-  float FeedData(const int* cols, const int* indptr,
+  std::pair<float, float> FeedData(const int* cols, const int* indptr,
       const int num_cols, const int num_indptr);
 
  private:
@@ -63,23 +65,24 @@ class CuW2V {
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
   int block_cnt_, block_dim_;
-  int num_dims_, num_words_;
-  float *emb_in_, *emb_out_;
+  int num_dims_, num_words_, window_size_;
+  float *emb_in_, *emb_out_, lr_;
   thrust::device_vector<float> dev_emb_in_, dev_emb_out_;
 
   // variables to construct huffman tree
   int max_depth_;
-  thrust::device_vector<float> dev_codes_;
+  thrust::device_vector<bool> dev_codes_;
   thrust::device_vector<int> dev_points_, dev_hs_indptr_;
 
   // related to negative sampling / hierarchical softmax and skip gram / cbow
-  bool sg_;
+  bool sg_, use_mean_;
   int neg_;
 
   // variables to construct random table
   thrust::device_vector<int> dev_random_table_;
-  int table_size_, table_seed_;
+  int random_size_, table_seed_;
   std::mt19937 table_rng_;
+  thrust::device_vector<default_random_engine> dev_rngs_;
 };
 
 } // namespace cusim

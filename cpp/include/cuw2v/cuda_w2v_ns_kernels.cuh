@@ -7,14 +7,12 @@
 #include "utils/cuda_utils_kernels.cuh"
 #include "cuw2v/cuda_w2v_base_kernels.cuh"
 
-using thrust::random::default_random_engine;
-using thrust::random::uniform_int_distribution;
 
 namespace cusim {
 
 __global__ void W2VNegSgKernel(
-  const int* cols, const int* indptr, const int window,
-  const int* random_table, const int random_size, default_random_engine* rngs,
+  const int* cols, const int* indptr,
+  const int* random_table, default_random_engine* rngs, const int random_size,
   const int num_indptr, const int num_dims, const int neg, const int window_size,
   float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const float lr) {
   
@@ -39,8 +37,8 @@ __global__ void W2VNegSgKernel(
     for (int j = beg; j < end; ++j) {
       if (threadIdx.x == 0) reduced_windows = dist_window(rng);
       __syncthreads();
-      int beg2 = max(beg, j - window + reduced_windows);
-      int end2 = min(end, j + window - reduced_windows + 1);
+      int beg2 = max(beg, j - window_size + reduced_windows);
+      int end2 = min(end, j + window_size - reduced_windows + 1);
       float* _emb_in = emb_in + num_dims * cols[j];
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
@@ -64,8 +62,8 @@ __global__ void W2VNegSgKernel(
 }
 
 __global__ void W2VNegCbowKernel(
-  const int* cols, const int* indptr, const int window,
-  const int* random_table, const int random_size, default_random_engine* rngs,
+  const int* cols, const int* indptr,
+  const int* random_table, default_random_engine* rngs, const int random_size,
   const int num_indptr, const int num_dims, const int neg, const int window_size, 
   float* emb_in, float* emb_out, 
   float* loss_nume, float* loss_deno, const bool use_mean, const float lr) {
@@ -89,8 +87,8 @@ __global__ void W2VNegCbowKernel(
     for (int j = beg; j < end; ++j) {
       if (threadIdx.x == 0) reduced_windows = dist_window(rng);
       __syncthreads();
-      int beg2 = max(beg, j - window + reduced_windows);
-      int end2 = min(end, j + window - reduced_windows + 1);
+      int beg2 = max(beg, j - window_size + reduced_windows);
+      int end2 = min(end, j + window_size - reduced_windows + 1);
       if (end2 - beg2 <= 1) continue;
       
       // zero-initialize shared mem

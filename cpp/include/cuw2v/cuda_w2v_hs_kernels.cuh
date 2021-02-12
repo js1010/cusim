@@ -11,7 +11,7 @@
 namespace cusim {
 
 __global__ void W2VHsSgKernel(
-  const int* cols, const int* indptr, const int window,
+  const int* cols, const int* indptr,
   const bool* codes, const int* points, const int* hs_indptr,
   const int num_indptr, const int num_dims, const int window_size,
   default_random_engine* rngs,
@@ -37,8 +37,8 @@ __global__ void W2VHsSgKernel(
     for (int j = beg; j < end; ++j) {
       if (threadIdx.x == 0) reduced_windows = dist_window(rng);
       __syncthreads();
-      int beg2 = max(beg, j - window + reduced_windows);
-      int end2 = min(end, j + window - reduced_windows + 1);
+      int beg2 = max(beg, j - window_size + reduced_windows);
+      int end2 = min(end, j + window_size - reduced_windows + 1);
       float* _emb_in = emb_in + num_dims * cols[j];
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
@@ -65,7 +65,7 @@ __global__ void W2VHsSgKernel(
 }
 
 __global__ void W2VHsCbowKernel(
-  const int* cols, const int* indptr, const int window,
+  const int* cols, const int* indptr,
   const bool* codes, const int* points, const int* hs_indptr,
   const int num_indptr, const int num_dims, const int window_size, default_random_engine* rngs,
   float* emb_in, float* emb_out, 
@@ -89,8 +89,8 @@ __global__ void W2VHsCbowKernel(
     for (int j = beg; j < end; ++j) {
       if (threadIdx.x == 0) reduced_windows = dist_window(rng);
       __syncthreads();
-      int beg2 = max(beg, j - window + reduced_windows);
-      int end2 = min(end, j + window - reduced_windows + 1);
+      int beg2 = max(beg, j - window_size + reduced_windows);
+      int end2 = min(end, j + window_size - reduced_windows + 1);
       if (end2 - beg2 <= 1) continue;
       
       // zero-initialize shared mem

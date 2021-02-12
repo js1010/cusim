@@ -39,7 +39,10 @@ bool CuW2V::Init(std::string opt_path) {
   block_dim_ = opt_["block_dim"].int_value();
   block_cnt_ = opt_["hyper_threads"].number_value() * (dev_info_.cores / block_dim_);
   sg_ = opt_["skip_gram"].bool_value();
-  
+  use_mean_ = opt_["use_mean"].bool_value();
+  window_size_ = opt_["window_size"].int_value();
+  lr_ = opt_["lr"].number_value();
+
   // if zero, we will use hierarchical softmax
   neg_ = opt_["negative_sampling"].int_value(); 
   
@@ -47,7 +50,7 @@ bool CuW2V::Init(std::string opt_path) {
   table_seed_ = opt_["table_seed"].int_value();
   const unsigned int table_seed = table_seed_;
   table_rng_.seed(table_seed);
-
+  
   INFO("num_dims: {}, block_dim: {}, block_cnt: {}, objective type: {}, neg: {}", 
       num_dims_, block_dim_, block_cnt_, sg_? "skip gram": "cbow", neg_);
   return true;
@@ -56,7 +59,7 @@ bool CuW2V::Init(std::string opt_path) {
 void CuW2V::BuildRandomTable(const float* word_count, const int num_words, 
     const int table_size, const int num_threads) {
   num_words_ = num_words;
-  table_size_ = table_size;
+  random_size_ = table_size;
   std::vector<float> acc;
   float cumsum = 0;
   for (int i = 0; i < num_words; ++i) {
@@ -65,12 +68,12 @@ void CuW2V::BuildRandomTable(const float* word_count, const int num_words,
   }
 
   std::uniform_real_distribution<float> dist(0.0f, cumsum);
-  dev_random_table_.resize(table_size_);
+  dev_random_table_.resize(random_size_);
   std::vector<int> host_random_table(table_size);
   #pragma omp parallel num_threads(num_threads)
   {
     #pragma omp for schedule(static)
-    for (int i = 0; i < table_size_; ++i) {
+    for (int i = 0; i < random_size_; ++i) {
       float r = dist(table_rng_);
       int pos = std::lower_bound(acc.begin(), acc.end(), r) - acc.begin();
       host_random_table[i] = pos;
@@ -166,8 +169,92 @@ int CuW2V::GetBlockCnt() {
 }
 
 
-float FeedData(const int* cols, const int* indptr, const int num_cols, const int* num_indptr) {
-  return 0;
+std::pair<float, float> CuW2V::FeedData(const int* cols, const int* indptr, 
+    const int num_cols, const int num_indptr) {
+  
+  // copy feed data to GPU memory
+  thrust::device_vector<int> dev_cols(num_cols); 
+  thrust::device_vector<int> dev_indptr(num_indptr + 1);
+  thrust::device_vector<float> dev_loss_nume(block_cnt_, 0.0f);
+  thrust::device_vector<float> dev_loss_deno(block_cnt_, 0.0f);
+  thrust::copy(cols, cols + num_cols, dev_cols.begin());
+  thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
+  CHECK_CUDA(cudaDeviceSynchronize());
+  DEBUG0("copy feed data to GPU memory");
+
+  // run GPU kernels
+  if (neg_ > 0) {
+    if (sg_) {
+      W2VNegSgKernel<<<block_cnt_, block_dim_, num_dims_ * sizeof(float)>>>(
+        thrust::raw_pointer_cast(dev_cols.data()),
+        thrust::raw_pointer_cast(dev_indptr.data()),
+        thrust::raw_pointer_cast(dev_random_table_.data()),
+        thrust::raw_pointer_cast(dev_rngs_.data()),
+        random_size_, num_indptr, num_dims_, neg_, window_size_,
+        thrust::raw_pointer_cast(dev_emb_in_.data()),
+        thrust::raw_pointer_cast(dev_emb_out_.data()),
+        thrust::raw_pointer_cast(dev_loss_nume.data()),
+        thrust::raw_pointer_cast(dev_loss_deno.data()),
+        lr_);
+    } else {
+      W2VNegCbowKernel<<<block_cnt_, block_dim_, 2 * num_dims_ * sizeof(float)>>>(
+        thrust::raw_pointer_cast(dev_cols.data()),
+        thrust::raw_pointer_cast(dev_indptr.data()),
+        thrust::raw_pointer_cast(dev_random_table_.data()),
+        thrust::raw_pointer_cast(dev_rngs_.data()),
+        random_size_, num_indptr, num_dims_, neg_, window_size_,
+        thrust::raw_pointer_cast(dev_emb_in_.data()),
+        thrust::raw_pointer_cast(dev_emb_out_.data()),
+        thrust::raw_pointer_cast(dev_loss_nume.data()),
+        thrust::raw_pointer_cast(dev_loss_deno.data()),
+        use_mean_, lr_);
+    }
+  } else {
+    if (sg_) {
+      W2VHsSgKernel<<<block_cnt_, block_dim_, num_dims_ * sizeof(float)>>>(
+        thrust::raw_pointer_cast(dev_cols.data()),
+        thrust::raw_pointer_cast(dev_indptr.data()),
+        thrust::raw_pointer_cast(dev_codes_.data()),
+        thrust::raw_pointer_cast(dev_points_.data()),
+        thrust::raw_pointer_cast(dev_hs_indptr_.data()),
+        num_indptr, num_dims_, window_size_,
+        thrust::raw_pointer_cast(dev_rngs_.data()),
+        thrust::raw_pointer_cast(dev_emb_in_.data()),
+        thrust::raw_pointer_cast(dev_emb_out_.data()),
+        thrust::raw_pointer_cast(dev_loss_nume.data()),
+        thrust::raw_pointer_cast(dev_loss_deno.data()),
+        lr_);
+
+    } else {
+      W2VHsCbowKernel<<<block_cnt_, block_dim_, 2 * num_dims_ * sizeof(float)>>>(
+        thrust::raw_pointer_cast(dev_cols.data()),
+        thrust::raw_pointer_cast(dev_indptr.data()),
+        thrust::raw_pointer_cast(dev_codes_.data()),
+        thrust::raw_pointer_cast(dev_points_.data()),
+        thrust::raw_pointer_cast(dev_hs_indptr_.data()),
+        num_indptr, num_dims_, window_size_,
+        thrust::raw_pointer_cast(dev_rngs_.data()),
+        thrust::raw_pointer_cast(dev_emb_in_.data()),
+        thrust::raw_pointer_cast(dev_emb_out_.data()),
+        thrust::raw_pointer_cast(dev_loss_nume.data()),
+        thrust::raw_pointer_cast(dev_loss_deno.data()),
+        use_mean_, lr_);
+
+    }
+
+  }
+  CHECK_CUDA(cudaDeviceSynchronize());
+
+  // accumulate loss nume / deno
+  std::vector<float> loss_nume(block_cnt_), loss_deno(block_cnt_);
+  thrust::copy(dev_loss_nume.begin(), dev_loss_nume.end(), loss_nume.begin());
+  thrust::copy(dev_loss_deno.begin(), dev_loss_deno.end(), loss_nume.begin());
+  CHECK_CUDA(cudaDeviceSynchronize());
+  float loss_nume_sum = std::accumulate(loss_nume.begin(), loss_nume.end(), 0.0f); 
+  float loss_deno_sum = std::accumulate(loss_deno.begin(), loss_deno.end(), 0.0f); 
+  DEBUG("loss nume: {}, deno: {}", loss_nume_sum, loss_deno_sum);
+
+  return {loss_nume_sum, loss_deno_sum};
 }
 
 }  // namespace cusim
