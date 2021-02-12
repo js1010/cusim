@@ -80,8 +80,7 @@ class CuW2V {
 
   // variables to construct random table
   thrust::device_vector<int> dev_random_table_;
-  int random_size_, table_seed_;
-  std::mt19937 table_rng_;
+  int random_size_, table_seed_, cuda_seed_;
   thrust::device_vector<default_random_engine> dev_rngs_;
 };
 

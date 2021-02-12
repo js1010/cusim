@@ -208,4 +208,8 @@ float ReduceSum(const float* vec, const int length) {
   return shared[0];
 }
 
+__global__ void InitRngsKernel(default_random_engine* rngs, int rand_seed) {
+  rngs[blockIdx.x].seed(blockIdx.x + rand_seed);
+}
+
 } // namespace cusim
