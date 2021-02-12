@@ -67,7 +67,8 @@ __global__ void W2VNegCbowKernel(
   const int* cols, const int* indptr, const int window,
   const int* random_table, const int random_size, default_random_engine* rngs,
   const int num_indptr, const int num_dims, const int neg,
-  float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const bool use_mean) {
+  float* emb_in, float* emb_out, 
+  float* loss_nume, float* loss_deno, const bool use_mean, const float lr) {
   
   default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
