@@ -14,12 +14,12 @@ namespace cusim {
 
 __inline__ __device__
 void PositiveFeedback(const float* vec1, float* vec2, float* grad, 
-    float& loss_nume, float& loss_deno, const int num_dims) {
+    float& loss_nume, float& loss_deno, const int num_dims, const float lr) {
   static __shared__ float g;
   float dot = Dot(emb_in[num_dims * j], emb_out[num_dims * k], num_dims);
   if (threadIdx.x == 0) {
     float exp_dot = expf(-dot);
-    g = exp_dot / (1 + exp_dot);
+    g = exp_dot / (1 + exp_dot) * lr;
     loss_nume += logf(1 + exp_dot);
     loss_deno++;
   }
@@ -34,12 +34,12 @@ void PositiveFeedback(const float* vec1, float* vec2, float* grad,
 
 __inline__ __device__
 void NegativeFeedback(const float* vec1, float* vec2, float* grad, 
-    float& loss_nume, float& loss_deno, const int num_dims) {
+    float& loss_nume, float& loss_deno, const int num_dims, const float lr) {
   static __shared__ float g;
   float dot = Dot(emb_in[num_dims * j], emb_out[num_dims * k], num_dims);
   if (threadIdx.x == 0) {
     float exp_dot = expf(dot);
-    g = exp_dot / (1 + exp_dot);
+    g = exp_dot / (1 + exp_dot) * lr;
     loss_nume += logf(1 + exp_dot);
     loss_deno++;
   }

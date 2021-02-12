@@ -12,20 +12,17 @@ using thrust::random::uniform_int_distribution;
 
 namespace cusim {
 
-__global__ void W2VNegSgKernel(
+__global__ void W2VHsSgKernel(
   const int* cols, const int* indptr, const int window,
-  const int* random_table, const int random_size, default_random_engine* rngs,
-  const int num_indptr, const int num_dims, const int neg,
-  float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const float lr) {
+  const bool* codes, const int* points, const int* hs_indptr,
+  const int num_indptr, const int num_dims,
+  float* emb_in, float* emb_out, 
+  float* loss_nume, float* loss_deno, const float lr) {
   
-  default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
-  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
-  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
   static __shared__ int reduced_windows;
-  static __shared__ int neg_word;
   extern __shared__ float shared_memory[];
   float* grad = &shared_memory[0];
 
@@ -44,15 +41,18 @@ __global__ void W2VNegSgKernel(
       float* _emb_in = emb_in + num_dims * cols[j];
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
-        PositiveFeedback(_emb_in, emb_out + num_dims * cols[k], 
-            grad, _loss_nume, _loss_deno, num_dims, lr)
-        if (int l = 0; l < neg; ++l) {
-          if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
+        int beg3 = hs_indptr[cols[k]];
+        int end3 = hs_indptr[cols[k] + 1];
+        if (int l = beg3; l < end3; ++l) {
+          if (codes[l]) {
+            PositiveFeedback(_emb_in, emb_out + num_dims * points[l],
+                grad, _loss_nume, _loss_deno, num_dims, lr);
+          } else {
+            NegativeFeedback(_emb_in, emb_out + num_dims * points[l],
+                grad, _loss_nume, _loss_deno, num_dims, lr);
+          }
           __syncthreads();
-          NegativeFeedback(_emb_in, emb_out + num_dims * neg_word, 
-              grad, _loss_nume, _loss_deno, num_dims, lr);
         }
-        __syncthreads();
         for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
           emb_in[num_dims * cols[j] + l] += grad[l];
           grad[l] = 0.0f;
@@ -63,20 +63,18 @@ __global__ void W2VNegSgKernel(
   } 
 }
 
-__global__ void W2VNegCbowKernel(
+__global__ void W2VHsCbowKernel(
   const int* cols, const int* indptr, const int window,
-  const int* random_table, const int random_size, default_random_engine* rngs,
+  const bool* codes, const int* points, const int* hs_indptr,
   const int num_indptr, const int num_dims, const int neg,
-  float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const bool use_mean) {
+  float* emb_in, float* emb_out, 
+  float* loss_nume, float* loss_deno, 
+  const bool use_mean, const float lr) {
   
-  default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
   float& _loss_deno = loss_deno[blockIdx.x];
 
-  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
-  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
   static __shared__ int reduced_windows;
-  static __shared__ int neg_word;
   extern __shared__ float shared_memory[];
   float* grad = &shared_memory[0];
   float* cbow = &shared_memory[num_dims];
@@ -111,19 +109,19 @@ __global__ void W2VNegCbowKernel(
         }
       }
       __syncthreads();
-      
-      PositiveFeedback(cbow, emb_out + num_dims * cols[j], grad,
-          loss_nume, loss_deno, num_dims, lr);
-      __syncthreads();
-      
-      // update negative feedback
-      for (int k = 0; k < neg; ++k){
-        if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
-        __syncthredas();
-        NegativeFeedback(cbow, emb_out + num_dims * neg_word, 
-            grad, _loss_nume, _loss_deno, num_dims, lr);
+       
+      int beg3 = hs_indptr[cols[k]];
+      int end3 = hs_indptr[cols[k] + 1];
+      if (int k = beg3; k < end3; ++k) {
+        if (codes[k]) {
+          PositiveFeedback(cbow, emb_out + num_dims * points[k],
+              grad, _loss_nume, _loss_deno, num_dims, lr);
+        } else {
+          NegativeFeedback(cbow, emb_out + num_dims * points[k],
+              grad, _loss_nume, _loss_deno, num_dims, lr);
+        }
+        __syncthreads();
       }
-      __syncthreads();
       
       // normalize grad if use_mean = true
       if (use_mean) {
@@ -135,12 +133,12 @@ __global__ void W2VNegCbowKernel(
 
       // update emb_in
       for (int k = beg2; k < end2; ++k) {
-        if (k == j) continue; 
-        for (int l = threadIdx.x; l < num_dims; l += blockDim.x)
+        if (k == j) continue;
+        for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
           emb_in[num_dims * cols[k] + l] += grad[l];
+        } 
+        __syncthreads();
       }
-      __syncthreads();
-
     }
   } 
 }
