@@ -59,6 +59,7 @@ class CuW2V {
   int GetBlockCnt();
   std::pair<float, float> FeedData(const int* cols, const int* indptr,
       const int num_cols, const int num_indptr);
+  void Pull();
 
  private:
   DeviceInfo dev_info_;

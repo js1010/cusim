@@ -264,4 +264,10 @@ std::pair<float, float> CuW2V::FeedData(const int* cols, const int* indptr,
   return {loss_nume_sum, loss_deno_sum};
 }
 
+void CuW2V::Pull() {
+  thrust::copy(dev_emb_in_.begin(), dev_emb_in_.end(), emb_in_);
+  thrust::copy(dev_emb_out_.begin(), dev_emb_out_.end(), emb_out_);
+  CHECK_CUDA(cudaDeviceSynchronize());
+}
+
 }  // namespace cusim
