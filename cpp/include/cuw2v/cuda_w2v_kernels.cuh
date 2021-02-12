@@ -6,115 +6,182 @@
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
 
+using thrust::random::default_random_engine;
+using thrust::random::uniform_int_distribution;
 
 namespace cusim {
 
-// reference: http://web.science.mq.edu.au/~mjohnson/code/digamma.c
+
 __inline__ __device__
-float Digamma(float x) {
-  float result = 0.0f, xx, xx2, xx4;
-  for ( ; x < 7.0f; ++x)
-    result -= 1.0f / x;
-  x -= 0.5f;
-  xx = 1.0f / x;
-  xx2 = xx * xx;
-  xx4 = xx2 * xx2;
-  result += logf(x) + 1.0f / 24.0f * xx2 
-    - 7.0f / 960.0f * xx4 + 31.0f / 8064.0f * xx4 * xx2 
-    - 127.0f / 30720.0f * xx4 * xx4;
-  return result;
+void PositiveFeedback(const float* vec1, float* vec2, float* grad, 
+    float& loss_nume, float& loss_deno, const int num_dims) {
+  static __shared__ float g;
+  float dot = Dot(emb_in[num_dims * j], emb_out[num_dims * k], num_dims);
+  if (threadIdx.x == 0) {
+    float exp_dot = expf(-dot);
+    g = exp_dot / (1 + exp_dot);
+    loss_nume += logf(1 + exp_dot);
+    loss_deno++;
+  }
+  __syncthreads();
+  for (int i = threadIdx.x; i < num_dims; i += blockDim.x) {
+    float tmp = vec2[i];
+    vec2[i] += vec1[i] * g;
+    grad[i] += tmp * g;
+  }
+  __syncthreads();
 }
 
-__global__ void EstepKernel(
-  const int* cols, const int* indptr, const bool* vali,
-  const int num_cols, const int num_indptr,
-  const int num_topics, const int num_iters,
-  float* gamma, float* new_gamma, float* phi,
-  const float* alpha, const float* beta,
-  float* grad_alpha, float* new_beta, 
-  float* train_losses, float* vali_losses, int* mutex) {
+__inline__ __device__
+void NegativeFeedback(const float* vec1, float* vec2, float* grad, 
+    float& loss_nume, float& loss_deno, const int num_dims) {
+  static __shared__ float g;
+  float dot = Dot(emb_in[num_dims * j], emb_out[num_dims * k], num_dims);
+  if (threadIdx.x == 0) {
+    float exp_dot = expf(dot);
+    g = exp_dot / (1 + exp_dot);
+    loss_nume += logf(1 + exp_dot);
+    loss_deno++;
+  }
+  __syncthreads();
+  for (int i = threadIdx.x; i < num_dims; i += blockDim.x) {
+    float tmp = vec2[i];
+    vec2[i] -= vec1[i] * g;
+    grad[i] -= tmp * g;
+  }
+  __syncthreads();
+}
+
+__global__ void W2VNegSgKernel(
+  const int* cols, const int* indptr, const int window,
+  const int* random_table, const int random_size, default_random_engine* rngs,
+  const int num_cols, const int num_indptr, const int num_dims, const int neg,
+  float* emb_in, float* emb_out, float* loss_nume, float* loss_deno) {
   
-  // storage for block
-  float* _gamma = gamma + num_topics * blockIdx.x;
-  float* _new_gamma = new_gamma + num_topics * blockIdx.x;
-  float* _phi = phi + num_topics * blockIdx.x;
-  float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
+  default_random_engine& rng = rngs[blockIdx.x];
+  float& _loss_nume = loss_nume[blockIdx.x];
+  float& _loss_deno = loss_deno[blockIdx.x];
+
+  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
+  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
+  static __shared__ int reduced_windows;
+  static __shared__ int neg_word;
+  extern __shared__ float shared_memory[];
+  float* grad = &shared_memory[0];
+
+  // zero-initialize shared mem
+  for (int i = threadIdx.x; i < num_dims; i += blockDim.x)
+    grad[i] = 0.0f;
+  __syncthreads();
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
     int beg = indptr[i], end = indptr[i + 1];
-    // initialize gamma
-    for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
-      _gamma[j] = alpha[j] + (end - beg) / num_topics;
-    __syncthreads();
-
-    // iterate E step
-    for (int j = 0; j < num_iters; ++j) {
-      // initialize new gamma
-      for (int k = threadIdx.x; k < num_topics; k += blockDim.x)
-        _new_gamma[k] = 0.0f;
+    for (int j = beg; j < end; ++j) {
+      if (threadIdx.x == 0) reduced_windows = dist_window(rng);
       __syncthreads();
-
-      // compute phi from gamma
-      for (int k = beg; k < end; ++k) {
-        const int w = cols[k];
-        const bool _vali = vali[k];
-        
-        // compute phi
-        if (not _vali or j + 1 == num_iters) {
-          for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
-            _phi[l] = beta[w * num_topics + l] * expf(Digamma(_gamma[l]));
+      int beg2 = max(beg, j - window + reduced_windows);
+      int end2 = min(end, j + window - reduced_windows + 1);
+      float* _emb_in = emb_in + num_dims * cols[j];
+      for (int k = beg2; k < end2; ++k) {
+        if (k == j) continue;
+        PositiveFeedback(_emb_in, emb_out + num_dims * cols[k], 
+            grad, _loss_nume, _loss_deno, num_dims)
+        if (int l = 0; l < neg; ++l) {
+          if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
           __syncthreads();
-          
-          // normalize phi and add it to new gamma and new beta
-          float phi_sum = ReduceSum(_phi, num_topics);
-
-          for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
-            _phi[l] /= phi_sum;
-            if (not _vali) _new_gamma[l] += _phi[l];
-          }
-          __syncthreads();
+          NegativeFeedback(_emb_in, emb_out + num_dims * neg_word, 
+              grad, _loss_nume, _loss_deno, num_dims);
         }
-        
-        if (j + 1 == num_iters) {
-          // write access of w th vector of new_beta 
-          if (threadIdx.x == 0) {
-            while (atomicCAS(&mutex[w], 0, 1)) {}
-          } 
-
-          __syncthreads();
-          for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
-            if (j + 1 == num_iters) { 
-              if (not _vali) new_beta[w * num_topics + l] += _phi[l];
-              _phi[l] *= beta[w * num_topics + l];
-            }
-          }
-          __syncthreads();
-
-          // release lock
-          if (threadIdx.x == 0) mutex[w] = 0;
-          __syncthreads();
-
-          float p = fmaxf(EPS, ReduceSum(_phi, num_topics));
-          if (threadIdx.x == 0) {
-            if (_vali)
-              vali_losses[blockIdx.x] += logf(p);
-            else
-              train_losses[blockIdx.x] += logf(p);
-          } 
+        __syncthreads();
+        for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
+          emb_in[num_dims * j + l] += grad[l];
+          grad[l] = 0.0f;
         }
         __syncthreads();
       }
-
-      // update gamma
-      for (int k = threadIdx.x; k < num_topics; k += blockDim.x)
-        _gamma[k] = _new_gamma[k] + alpha[k];
-      __syncthreads();
     }
-    float gamma_sum = ReduceSum(_gamma, num_topics);
-    for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
-      _grad_alpha[j] += (Digamma(_gamma[j]) - Digamma(gamma_sum));
+  } 
+}
 
-    __syncthreads();
+__global__ void W2VNegCbowKernel(
+  const int* cols, const int* indptr, const int window,
+  const int* random_table, const int random_size, default_random_engine* rngs,
+  const int num_cols, const int num_indptr, const int num_dims, const int neg,
+  float* emb_in, float* emb_out, float* loss_nume, float* loss_deno, const bool use_mean) {
+  
+  default_random_engine& rng = rngs[blockIdx.x];
+  float& _loss_nume = loss_nume[blockIdx.x];
+  float& _loss_deno = loss_deno[blockIdx.x];
+
+  static __shared__ uniform_int_distribution<int> dist_neg(0, random_size - 1);
+  static __shared__ uniform_int_distribution<int> dist_window(0, window - 1);
+  static __shared__ int reduced_windows;
+  static __shared__ int neg_word;
+  extern __shared__ float shared_memory[];
+  float* grad = &shared_memory[0];
+  float* cbow = &shared_memory[num_dims];
+
+  __syncthreads();
+
+  for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
+    int beg = indptr[i], end = indptr[i + 1];
+    for (int j = beg; j < end; ++j) {
+      if (threadIdx.x == 0) reduced_windows = dist_window(rng);
+      __syncthreads();
+      int beg2 = max(beg, j - window + reduced_windows);
+      int end2 = min(end, j + window - reduced_windows + 1);
+      if (end2 - beg2 <= 1) continue;
+      
+      // zero-initialize shared mem
+      for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
+        grad[k] = 0.0f;
+        cbow[k] = 0.0f;
+      }
+
+      // compute cbow
+      for (int k = beg2; k < end2; ++k) {
+        if (k == j) continue;
+        for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
+          cbow[l] += emb_in[num_dims * cols[k] + l];
+        }
+      }
+      if (use_mean) {
+        for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
+          cbow[k] /= (end2 - beg2 - 1);
+        }
+      }
+      __syncthreads();
+      
+      PositiveFeedback(cbow, emb_out + num_dims * cols[j], grad,
+          loss_nume, loss_deno, num_dims);
+      __syncthreads();
+      
+      // update negative feedback
+      for (int k = 0; k < neg; ++k){
+        if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
+        __syncthredas();
+        NegativeFeedback(cbow, emb_out + num_dims * neg_word, 
+            grad, _loss_nume, _loss_deno, num_dims);
+      }
+      __syncthreads();
+      
+      // normalize grad if use_mean = true
+      if (use_mean) {
+        for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
+          grad[k] /= (end2 - beg2 - 1);
+        }
+      }
+      __syncthreads();
+
+      // update emb_in
+      for (int k = beg2; k < end2; ++k) {
+        if (k == j) continue; 
+        for (int l = threadIdx.x; l < num_dims; l += blockDim.x)
+          emb_in[num_dims * cols[k] + l] += grad[l];
+      }
+      __syncthreads();
+
+    }
   } 
 }
 
