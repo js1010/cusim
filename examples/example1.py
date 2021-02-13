@@ -5,14 +5,20 @@
 # LICENSE file in the root directory of this source tree.
 
 # pylint: disable=no-name-in-module,logging-format-truncated
+# pylint: disable=too-few-public-methods
 import os
+import time
 import subprocess
-import fire
 
+import fire
 import h5py
 import numpy as np
+import gensim
 from gensim import downloader as api
+from gensim.test.utils import datapath
+from gensim import utils
 from cusim import aux, IoUtils, CuLDA, CuW2V
+
 
 LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
@@ -23,6 +29,16 @@ LDA_PATH = f"./res/{DATASET}-lda.h5"
 PROCESSED_DATA_DIR = f"./res/{DATASET}-converted"
 MIN_COUNT = 5
 TOPK = 10
+
+class MyCorpus:
+  """An iterator that yields sentences (lists of str)."""
+
+  def __iter__(self):
+    corpus_path = datapath('lee_background.cor')
+    for line in open(corpus_path):
+      # assume there's one document per line, tokens separated by whitespace
+      yield utils.simple_preprocess(line)
+
 
 def download():
   if os.path.exists(DATA_PATH):
@@ -66,15 +82,30 @@ def run_lda():
       print(f"rank {j + 1}. word: {word}, prob: {prob}")
   h5f.close()
 
-def run_w2v():
+def run_cusim_w2v():
   opt = {
     # "c_log_level": 3,
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
+    "batch_size": 100000,
+    "num_dims": 100,
     # "skip_preprocess":True,
   }
   w2v = CuW2V(opt)
+  start = time.time()
   w2v.train_model()
+  LOGGER.info("elapsed for cusim w2v training: %.4e sec", time.time() - start)
+
+def run_gensim_w2v():
+  start = time.time()
+  model = gensim.models.Word2Vec(corpus_file=DATA_PATH, compute_loss=True,
+                                 min_count=5, sg=True, hs=False, workers=8,
+                                 alpha=0.001, negative=10, iter=1)
+  loss = model.get_latest_training_loss()
+  LOGGER.info("elapsed for gensim w2v training: %.4e sec, loss: %f",
+              time.time() - start, loss)
+  model.wv.save_word2vec_format("res/gensim.w2v.model", binary=False)
+
 
 if __name__ == "__main__":
   fire.Fire()
