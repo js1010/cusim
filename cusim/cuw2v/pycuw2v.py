@@ -45,7 +45,7 @@ class CuW2V:
   def preprocess_data(self):
     if self.opt.skip_preprocess:
       return
-    iou = IoUtils(self.opt.io)
+    iou = IoUtils(aux.proto_to_dict(self.opt.io))
     if not self.opt.processed_data_dir:
       self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
     iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
