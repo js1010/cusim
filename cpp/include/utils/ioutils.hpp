@@ -30,11 +30,12 @@ class IoUtils {
   IoUtils();
   ~IoUtils();
   bool Init(std::string opt_path);
-  int LoadStreamFile(std::string filepath);
+  int64_t LoadStreamFile(std::string filepath);
   std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
   std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
   void GetWordVocab(int min_count, std::string keys_path, std::string count_path);
   void GetToken(int* rows, int* cols, int* indptr);
+
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
   void ParseLineImpl(std::string line, std::vector<std::string>& line_vec);
@@ -49,6 +50,7 @@ class IoUtils {
   std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
   int64_t num_lines_, remain_lines_;
+  bool lower_;
 };  // class IoUtils
 
 } // namespace cusim

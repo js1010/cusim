@@ -119,7 +119,7 @@ void IoUtils::GetToken(int* rows, int* cols, int* indptr) {
 }
 
 std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) {
-  int read_lines = std::min(num_lines, remain_lines_);
+  int read_lines = static_cast<int>(std::min(static_cast<int64_t>(num_lines), remain_lines_));
   remain_lines_ -= read_lines;
   #pragma omp parallel num_threads(num_threads)
   {
