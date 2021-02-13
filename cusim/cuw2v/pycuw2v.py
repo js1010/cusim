@@ -82,12 +82,12 @@ class CuW2V:
 
     # random initialize alpha and beta
     np.random.seed(self.opt.seed)
-    scale = 1 / self.opt.num_dims
-    self.emb_in = np.random.uniform(low=-scale, high=scale, \
+    scale = 1 / np.sqrt(self.opt.num_dims)
+    self.emb_in = np.random.normal(loc=0, scale=scale, \
       size=(self.num_words, self.opt.num_dims)).astype(np.float32)
     out_words = self.num_words if self.opt.neg else self.num_words - 1
-    self.emb_out = np.zeros( \
-      shape=(out_words, self.opt.num_dims), dtype=np.float32)
+    self.emb_out = np.random.normal(loc=0, scale=scale, \
+      size=(out_words, self.opt.num_dims)).astype(np.float32)
     self.logger.info("emb_in %s, emb_out %s initialized",
                      self.emb_in.shape, self.emb_out.shape)
 
