@@ -64,7 +64,7 @@ class IoUtils:
     processed = 0
     h5f = h5py.File(token_path, "w")
     rows = h5f.create_dataset("rows", shape=(chunk_indices,),
-                              maxshape=(None,), dtype=np.int32,
+                              maxshape=(None,), dtype=np.int64,
                               chunks=(chunk_indices,))
     cols = h5f.create_dataset("cols", shape=(chunk_indices,),
                               maxshape=(None,), dtype=np.int32,
@@ -73,7 +73,7 @@ class IoUtils:
                               maxshape=(None,), dtype=np.float32,
                               chunks=(chunk_indices,))
     indptr =  h5f.create_dataset("indptr", shape=(full_num_lines + 1,),
-                                 dtype=np.int32, chunks=True)
+                                 dtype=np.int64, chunks=True)
     processed, offset = 1, 0
     indptr[0] = 0
     while True:
@@ -84,13 +84,15 @@ class IoUtils:
       _indptr = np.empty(shape=(read_lines,), dtype=np.int32)
       self.obj.get_token(_rows, _cols, _indptr)
       rows.resize((offset + data_size,))
-      rows[offset:offset + data_size] = _rows + (processed - 1)
+      rows[offset:offset + data_size] = \
+        _rows.astype(np.int64) + (processed - 1)
       cols.resize((offset + data_size,))
       cols[offset:offset + data_size] = _cols
       vali.resize((offset + data_size,))
       vali[offset:offset + data_size] = \
         np.random.uniform(size=(data_size,)).astype(np.float32)
-      indptr[processed:processed + read_lines] = _indptr + offset
+      indptr[processed:processed + read_lines] = \
+        _indptr.astype(np.int64) + offset
       offset += data_size
       processed += read_lines
       pbar.update(processed - 1)

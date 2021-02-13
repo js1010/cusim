@@ -23,7 +23,7 @@ class IoUtilsBind {
     return obj_.Init(opt_path);
   }
 
-  int LoadStreamFile(std::string filepath) {
+  int64_t LoadStreamFile(std::string filepath) {
     return obj_.LoadStreamFile(filepath);
   }
 

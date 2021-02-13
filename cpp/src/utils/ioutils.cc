@@ -51,11 +51,11 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
   }
 }
 
-int IoUtils::LoadStreamFile(std::string filepath) {
+int64_t IoUtils::LoadStreamFile(std::string filepath) {
   INFO("read gensim file to generate vocabulary: {}", filepath);
   if (stream_fin_.is_open()) stream_fin_.close();
   stream_fin_.open(filepath.c_str());
-  int count = 0;
+  int64_t count = 0;
   std::string line;
   while (getline(stream_fin_, line))
     count++;
@@ -68,7 +68,7 @@ int IoUtils::LoadStreamFile(std::string filepath) {
 }
 
 std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
-  int read_lines = std::min(num_lines, remain_lines_);
+  int read_lines = static_cast<int>(std::min(static_cast<int64_t>(num_lines), remain_lines_));
   if (not read_lines) return {0, 0};
   remain_lines_ -= read_lines;
   cols_.clear();

@@ -121,7 +121,7 @@ class CuW2V:
 
       # call cuda kernel
       _loss_nume, _loss_deno = \
-        self.obj.feed_data(cols, indptr)
+        self.obj.feed_data(cols, indptr.astype(np.int32))
 
       # accumulate loss
       loss_nume += _loss_nume

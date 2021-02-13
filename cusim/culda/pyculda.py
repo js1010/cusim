@@ -120,7 +120,8 @@ class CuLDA:
 
       # call cuda kernel
       train_loss, vali_loss = \
-        self.obj.feed_data(cols, indptr, vali, self.opt.num_iters_in_e_step)
+        self.obj.feed_data(cols, indptr.astype(np.int32),
+                           vali, self.opt.num_iters_in_e_step)
 
       # accumulate loss
       train_loss_nume -= train_loss
