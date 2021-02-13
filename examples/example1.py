@@ -17,6 +17,7 @@ import numpy as np
 
 import gensim
 from gensim import downloader as api
+from gensim.test.utils import datapath
 
 from cusim import aux, IoUtils, CuLDA, CuW2V
 
@@ -30,7 +31,8 @@ LDA_PATH = f"./res/{DATASET}-lda.h5"
 PROCESSED_DATA_DIR = f"./res/{DATASET}-converted"
 MIN_COUNT = 5
 TOPK = 10
-
+CUSIM_W2V_PATH = "./res/cusim.w2v.model"
+GENSIM_W2V_PATH = "./res/gensim.w2v.model"
 
 def download():
   if os.path.exists(DATA_PATH):
@@ -91,25 +93,37 @@ def run_cusim_w2v():
     "batch_size": 1000000,
     "num_dims": 100,
     "hyper_threads": 100,
+    "epochs": 10,
     "io": {
       "lower": False
-    }
+    },
+    # "pretrained_model": {
+    #   "filename": "./res/gensim.w2v.model",
+    # }
     # "skip_preprocess":True,
   }
   w2v = CuW2V(opt)
   start = time.time()
   w2v.train_model()
   LOGGER.info("elapsed for cusim w2v training: %.4e sec", time.time() - start)
+  w2v.save_word2vec_format(CUSIM_W2V_PATH, binary=False)
+  evaluate_w2v_model(CUSIM_W2V_PATH)
 
 def run_gensim_w2v():
   start = time.time()
-  model = gensim.models.Word2Vec(corpus_file=DATA_PATH, compute_loss=True,
+  model = gensim.models.Word2Vec(corpus_file=DATA_PATH,
                                  min_count=5, sg=True, hs=False, workers=8,
-                                 alpha=0.001, negative=10, iter=1)
-  loss = model.get_latest_training_loss()
-  LOGGER.info("elapsed for gensim w2v training: %.4e sec, loss: %f",
-              time.time() - start, loss)
-  model.wv.save_word2vec_format("res/gensim.w2v.model", binary=False)
+                                 alpha=0.001, negative=10, iter=3)
+  LOGGER.info("elapsed for gensim w2v training: %.4e sec", time.time() - start)
+  model.wv.save_word2vec_format(GENSIM_W2V_PATH, binary=False)
+  LOGGER.info("gensim w2v model is saved to %s", GENSIM_W2V_PATH)
+  evaluate_w2v_model(GENSIM_W2V_PATH)
+
+def evaluate_w2v_model(model=GENSIM_W2V_PATH):
+  LOGGER.info("load word2vec format model from %s", model)
+  model = gensim.models.KeyedVectors.load_word2vec_format(model)
+  results = model.wv.evaluate_word_pairs(datapath("wordsim353.tsv"))
+  LOGGER.info("evaluation results: %s", results)
 
 
 if __name__ == "__main__":

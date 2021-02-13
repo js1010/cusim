@@ -58,7 +58,7 @@ class CuW2V:
     count_path = pjoin(data_dir, "count.txt")
     self.logger.info("load key, count from %s, %s", keys_path, count_path)
     with open(keys_path, "rb") as fin:
-      self.words = [line.strip() for line in fin]
+      self.words = [line.strip().decode("utf8") for line in fin]
     with open(count_path, "rb") as fin:
       self.word_count = np.array([float(line.strip()) for line in fin],
                                  dtype=np.float32)
@@ -82,16 +82,17 @@ class CuW2V:
 
     # random initialize alpha and beta
     np.random.seed(self.opt.seed)
-    self.emb_in = np.random.normal( \
+    scale = 1 / self.opt.num_dims
+    self.emb_in = np.random.uniform(low=-scale, high=scale, \
       size=(self.num_words, self.opt.num_dims)).astype(np.float32)
     out_words = self.num_words if self.opt.neg else self.num_words - 1
-    self.emb_out = np.random.uniform( \
-      size=(out_words, self.opt.num_dims)).astype(np.float32)
+    self.emb_out = np.zeros( \
+      shape=(out_words, self.opt.num_dims), dtype=np.float32)
     self.logger.info("emb_in %s, emb_out %s initialized",
                      self.emb_in.shape, self.emb_out.shape)
 
     if self.opt.pretrained_model.filename:
-      self.load_word2vec_model(**aux.proto_to_dict(self.opt.pretrained_model))
+      self.load_word2vec_format(**aux.proto_to_dict(self.opt.pretrained_model))
 
     # push it to gpu
     self.obj.load_model(self.emb_in, self.emb_out)
@@ -159,7 +160,7 @@ class CuW2V:
           fout.write(f"{prefix}{word} "
                      f"{' '.join(repr(val) for val in vec)}\n".encode("utf8"))
 
-  def load_word2vec_forrmat(self, filename, binary=False,
+  def load_word2vec_format(self, filename, binary=False,
                             symmetry=False, no_header=False):
     self.logger.info("load pretrained model from %s", filename)
     # copy pretrained model to emb_out as well only if
@@ -176,19 +177,22 @@ class CuW2V:
           key, vec = line.split()
           vector_dict[key] = np.fromstring(vec, dtype=np.float32)
         else:
-          line_vec = line.split()
-          key = line_vec[0]
+          line_vec = line.strip().split()
+          key = line_vec[0].decode("utf8")
           vec = np.array([float(val) for val in line_vec[1:]],
                          dtype=np.float32)
           vector_dict[key] = vec
 
     # copy to variable
+    loaded_cnt = 0
     word_idmap = {word: idx for idx, word in enumerate(self.words)}
-    for key, vec in self.vector_dict:
+    for key, vec in vector_dict.items():
       assert len(vec) == self.opt.num_dims
       if key not in word_idmap:
         continue
       idx = word_idmap[key]
+      loaded_cnt += 1
       self.emb_in[idx, :] = vec
       if symmetry:
         self.emb_out[idx, :] = vec
+    self.logger.info("loaded count: %d", loaded_cnt)
