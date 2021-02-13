@@ -265,7 +265,7 @@ std::pair<float, float> CuW2V::FeedData(const int* cols, const int* indptr,
   // accumulate loss nume / deno
   std::vector<float> loss_nume(block_cnt_), loss_deno(block_cnt_);
   thrust::copy(dev_loss_nume.begin(), dev_loss_nume.end(), loss_nume.begin());
-  thrust::copy(dev_loss_deno.begin(), dev_loss_deno.end(), loss_nume.begin());
+  thrust::copy(dev_loss_deno.begin(), dev_loss_deno.end(), loss_deno.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
   float loss_nume_sum = std::accumulate(loss_nume.begin(), loss_nume.end(), 0.0f); 
   float loss_deno_sum = std::accumulate(loss_deno.begin(), loss_deno.end(), 0.0f); 

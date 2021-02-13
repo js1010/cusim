@@ -19,11 +19,16 @@ from cusim.cuw2v.cuw2v_bind import CuW2VBind
 from cusim.config_pb2 import CuW2VConfigProto
 
 EPS = 1e-10
+WARP_SIZE = 32
 
 class CuW2V:
   def __init__(self, opt=None):
     self.opt = aux.get_opt_as_proto(opt or {}, CuW2VConfigProto)
     self.logger = aux.get_logger("culda", level=self.opt.py_log_level)
+
+    assert self.opt.block_dim <= WARP_SIZE ** 2 and \
+      self.opt.block_dim % WARP_SIZE == 0, \
+      f"invalid block dim ({self.opt.block_dim}, warp size: {WARP_SIZE})"
 
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     opt_content = json.dumps(aux.proto_to_dict(self.opt), indent=2)
@@ -61,6 +66,7 @@ class CuW2V:
                                  dtype=np.float32)
     self.word_count = np.power(self.word_count, self.opt.count_power)
     self.num_words = len(self.words)
+    assert len(self.words) == len(self.word_count)
 
     # count number of docs
     h5f = h5py.File(pjoin(data_dir, "token.h5"), "r")
@@ -69,6 +75,12 @@ class CuW2V:
 
     self.logger.info("number of words: %d, docs: %d",
                      self.num_words, self.num_docs)
+
+    if self.opt.neg:
+      self.obj.build_random_table( \
+        self.word_count, self.opt.random_size, self.opt.num_threads)
+    else:
+      self.obj.build_huffman_tree(self.word_count)
 
     # random initialize alpha and beta
     np.random.seed(self.opt.seed)
@@ -86,11 +98,6 @@ class CuW2V:
   def train_model(self):
     self.preprocess_data()
     self.init_model()
-    if self.opt.neg:
-      self.obj.build_random_table( \
-        self.word_count, self.opt.random_size, self.opt.num_threads)
-    else:
-      self.obj.build_huffman_tree(self.word_count)
     h5f = h5py.File(pjoin(self.opt.processed_data_dir, "token.h5"), "r")
     for epoch in range(1, self.opt.epochs + 1):
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)

@@ -60,6 +60,5 @@ message CuW2VConfigProto {
   optional bool use_mean = 20 [default = true];
   optional double lr = 21 [default = 0.001];
   optional int32 window_size = 22 [default = 5];
-
-
+  optional int32 num_threads = 23 [default = 4];
 }
