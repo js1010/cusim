@@ -90,6 +90,9 @@ class CuW2V:
     self.logger.info("emb_in %s, emb_out %s initialized",
                      self.emb_in.shape, self.emb_out.shape)
 
+    if self.opt.pretrained_model.filename:
+      self.load_word2vec_model(**aux.proto_to_dict(self.opt.pretrained_model))
+
     # push it to gpu
     self.obj.load_model(self.emb_in, self.emb_out)
 
@@ -132,3 +135,60 @@ class CuW2V:
       pbar.update(end, values=[("loss", loss)])
       if end == size:
         break
+
+  def save_h5_model(self, filename):
+    self.logger.info("save h5 format model to %s", filename)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    h5f = h5py.File(filename, "w")
+    h5f.create_dataset("emb_in", data=self.emb_in)
+    h5f.create_dataset("emb_out", data=self.emb_out)
+    h5f.create_dataset("keys", data=np.array(self.words))
+    h5f.close()
+
+  def save_word2vec_format(self, filename, binary=False, prefix=""):
+    self.logger.info("save word2vec format model to %s, "
+                     "binary: %s, prefix: '%s'", filename, binary, prefix)
+    # save model compatible with gensim and original w2v code by Google
+    with open(filename, "wb") as fout:
+      fout.write(f"{self.num_words} {self.opt.num_dims}\n".encode("utf8"))
+      for idx, word in enumerate(self.words):
+        vec = self.emb_in[idx]
+        if binary:
+          fout.write(f"{prefix}{word} ".encode("utf8") + vec.tobytes())
+        else:
+          fout.write(f"{prefix}{word} "
+                     f"{' '.join(repr(val) for val in vec)}\n".encode("utf8"))
+
+  def load_word2vec_forrmat(self, filename, binary=False,
+                            symmetry=False, no_header=False):
+    self.logger.info("load pretrained model from %s", filename)
+    # copy pretrained model to emb_out as well only if
+    # we use negative sampling, NOT hierarchical softmax
+    assert not symmetry or self.opt.neg, "no symmetry in hierarchical softmax"
+
+    # read variable
+    vector_dict = {}
+    with open(filename, "rb") as fin:
+      if not no_header:
+        fin.readline()  # throw one line
+      for line in fin:
+        if binary:
+          key, vec = line.split()
+          vector_dict[key] = np.fromstring(vec, dtype=np.float32)
+        else:
+          line_vec = line.split()
+          key = line_vec[0]
+          vec = np.array([float(val) for val in line_vec[1:]],
+                         dtype=np.float32)
+          vector_dict[key] = vec
+
+    # copy to variable
+    word_idmap = {word: idx for idx, word in enumerate(self.words)}
+    for key, vec in self.vector_dict:
+      assert len(vec) == self.opt.num_dims
+      if key not in word_idmap:
+        continue
+      idx = word_idmap[key]
+      self.emb_in[idx, :] = vec
+      if symmetry:
+        self.emb_out[idx, :] = vec

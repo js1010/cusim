@@ -34,6 +34,15 @@ message CuLDAConfigProto {
   optional IoUtilsConfigProto io = 15;
 }
 
+
+message W2VPretrainedModel {
+  optional string filename = 1;
+  optional bool no_header = 2;
+  optional bool binary = 3;
+  optional bool symmetry = 4;
+}
+
+
 message CuW2VConfigProto {
   required string data_path = 7;
 
@@ -65,4 +74,5 @@ message CuW2VConfigProto {
   optional int32 num_threads = 23 [default = 4];
 
   optional IoUtilsConfigProto io = 24;
+  optional W2VPretrainedModel pretrained_model = 25;
 }
