@@ -11,6 +11,7 @@ message IoUtilsConfigProto {
   optional int32 c_log_level = 2 [default = 2];
   optional int32 chunk_lines = 3 [default = 100000];
   optional int32 num_threads = 4 [default = 4];
+  optional bool lower = 5 [default = true];
 }
 
 message CuLDAConfigProto {
@@ -30,6 +31,7 @@ message CuLDAConfigProto {
   optional int32 num_iters_in_e_step = 12 [default = 5];
   optional double vali_p = 13 [default = 0.2];
   optional int32 seed = 14 [default = 777];
+  optional IoUtilsConfigProto io = 15;
 }
 
 message CuW2VConfigProto {
@@ -61,4 +63,6 @@ message CuW2VConfigProto {
   optional double lr = 21 [default = 0.001];
   optional int32 window_size = 22 [default = 5];
   optional int32 num_threads = 23 [default = 4];
+
+  optional IoUtilsConfigProto io = 24;
 }

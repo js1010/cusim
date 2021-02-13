@@ -24,7 +24,8 @@ LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
 # DATASET = "wiki-english-20171001"
 DATASET = "quora-duplicate-questions"
-DATA_PATH = f"./res/{DATASET}.stream.txt"
+# DATA_PATH = f"./res/{DATASET}.stream.txt"
+DATA_PATH = "./res/corpus.txt"
 LDA_PATH = f"./res/{DATASET}-lda.h5"
 PROCESSED_DATA_DIR = f"./res/{DATASET}-converted"
 MIN_COUNT = 5
@@ -54,7 +55,7 @@ def download():
 
 def run_io():
   download()
-  iou = IoUtils(opt={"chunk_lines": 10000, "num_threads": 8})
+  iou = IoUtils(opt={"chunk_lines": 10000, "num_threads": 1})
   iou.convert_stream_to_h5(DATA_PATH, 5, PROCESSED_DATA_DIR)
 
 
@@ -89,6 +90,7 @@ def run_cusim_w2v():
     "processed_data_dir": PROCESSED_DATA_DIR,
     "batch_size": 100000,
     "num_dims": 100,
+    "word_min_count": MIN_COUNT,
     # "skip_preprocess":True,
   }
   w2v = CuW2V(opt)
@@ -105,6 +107,46 @@ def run_gensim_w2v():
   LOGGER.info("elapsed for gensim w2v training: %.4e sec, loss: %f",
               time.time() - start, loss)
   model.wv.save_word2vec_format("res/gensim.w2v.model", binary=False)
+
+def dump_corpus():
+  corpus = gensim.models.word2vec.LineSentence(DATA_PATH)
+  fout = open("res/corpus.txt", "wb")
+  for sentence in corpus:
+    fout.write((" ".join(sentence) + "\n").encode("utf8"))
+  fout.close()
+
+def dump_corpus2():
+  corpus = gensim.models.word2vec.LineSentence(DATA_PATH)
+  word_count = {}
+  for sentence in corpus:
+    for word in sentence:
+      word_count[word] = word_count.get(word, 0) + 1
+  words = [word for word, count in word_count.items() if count >= 5]
+  print(len(words))
+
+def dump_corpus3():
+  word_count = {}
+  with open("res/corpus.txt", "rb") as fin:
+    for line in fin:
+      for word in line.decode("utf8").strip().split():
+        word_count[word] = word_count.get(word, 0) + 1
+  words = [word for word, count in word_count.items() if count >= 5]
+  print(len(words))
+
+def compare():
+  cusim_words = []
+  with open("res/quora-duplicate-questions-converted/keys.txt", "rb") as fin:
+    for line in fin:
+      word = line.decode("utf8").strip()
+      cusim_words.append(word)
+  gensim_words = []
+  with open("res/gensim.w2v.model", "rb") as fin:
+    for line in fin:
+      word = line.decode("utf8").strip().split()[0]
+      gensim_words.append(word)
+  diff1 = list(set(gensim_words) - set(cusim_words))
+  diff2 = list(set(cusim_words) - set(gensim_words))
+  print(diff1[:5])
 
 
 if __name__ == "__main__":

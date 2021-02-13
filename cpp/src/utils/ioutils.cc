@@ -25,6 +25,7 @@ bool IoUtils::Init(std::string opt_path) {
   if (not err_cmt.empty()) return false;
   opt_ = _opt;
   logger_container_->set_log_level(opt_["c_log_level"].int_value());
+  lower_ = opt_["lower"].bool_value();
   return true;
 }
 
@@ -42,7 +43,7 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
       ret.push_back(element);
       element.clear();
     } else {
-      element += std::tolower(line[i]);
+      element += (lower_? std::tolower(line[i]): line[i]);
     }
   }
   if (element.size() > 0) {
