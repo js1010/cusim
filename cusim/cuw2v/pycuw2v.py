@@ -17,9 +17,7 @@ import numpy as np
 from cusim import aux, IoUtils
 from cusim.cuw2v.cuw2v_bind import CuW2VBind
 from cusim.config_pb2 import CuW2VConfigProto
-
-EPS = 1e-10
-WARP_SIZE = 32
+from cusim.constants import EPS, WARP_SIZE
 
 class CuW2V:
   def __init__(self, opt=None):
@@ -102,7 +100,7 @@ class CuW2V:
     for epoch in range(1, self.opt.epochs + 1):
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
       self._train_epoch(h5f)
-    self.pull()
+    self.obj.pull()
     h5f.close()
 
   def _train_epoch(self, h5f):

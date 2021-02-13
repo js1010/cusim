@@ -68,7 +68,7 @@ def run_lda():
 
 def run_w2v():
   opt = {
-    "c_log_level": 3,
+    # "c_log_level": 3,
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
     # "skip_preprocess":True,

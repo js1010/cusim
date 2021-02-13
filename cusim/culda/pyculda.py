@@ -18,9 +18,8 @@ from scipy.special import polygamma as pg
 from cusim import aux, IoUtils
 from cusim.culda.culda_bind import CuLDABind
 from cusim.config_pb2 import CuLDAConfigProto
+from cusim.constants import EPS, WARP_SIZE
 
-EPS = 1e-10
-WARP_SIZE = 32
 
 class CuLDA:
   def __init__(self, opt=None):
