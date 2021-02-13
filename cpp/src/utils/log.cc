@@ -16,6 +16,14 @@ CuSimLogger::CuSimLogger() {
   logger_ = spdlog::default_logger();
 }
 
+CuSimLogger::CuSimLogger(std::string name) {
+  // auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+  auto stderr_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+  // spdlog::sinks_init_list sinks = {console_sink, stderr_sink};
+  logger_ = std::make_shared<spdlog::logger>(name, stderr_sink);
+  logger_->set_pattern("[%^%-8l%$] %Y-%m-%d %H:%M:%S %v");
+}
+
 std::shared_ptr<spdlog::logger>& CuSimLogger::get_logger() {
   return logger_;
 }
@@ -23,11 +31,11 @@ std::shared_ptr<spdlog::logger>& CuSimLogger::get_logger() {
 void CuSimLogger::set_log_level(int level) {
   global_logging_level_ = level;
   switch (level) {
-    case 0: spdlog::set_level(spdlog::level::off); break;
-    case 1: spdlog::set_level(spdlog::level::warn); break;
-    case 2: spdlog::set_level(spdlog::level::info); break;
-    case 3: spdlog::set_level(spdlog::level::debug); break;
-    default: spdlog::set_level(spdlog::level::trace); break;
+    case 0: logger_->set_level(spdlog::level::off); break;
+    case 1: logger_->set_level(spdlog::level::warn); break;
+    case 2: logger_->set_level(spdlog::level::info); break;
+    case 3: logger_->set_level(spdlog::level::debug); break;
+    default: logger_->set_level(spdlog::level::trace); break;
   }
 }
 

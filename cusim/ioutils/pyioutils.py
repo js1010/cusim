@@ -33,7 +33,8 @@ class IoUtils:
     assert self.obj.init(bytes(tmp.name, "utf8")), f"failed to load {tmp.name}"
     os.remove(tmp.name)
 
-  def load_stream_vocab(self, filepath, min_count, keys_path):
+  def load_stream_vocab(self, filepath, min_count,
+                        keys_path, count_path):
     full_num_lines = self.obj.load_stream_file(filepath)
     pbar = aux.Progbar(full_num_lines, unit_name="line",
                         stateful_metrics=["word_count"])
@@ -46,17 +47,18 @@ class IoUtils:
       pbar.update(processed, values=[("word_count", word_count)])
       if processed == full_num_lines:
         break
-    self.obj.get_word_vocab(min_count, keys_path)
+    self.obj.get_word_vocab(min_count, keys_path, count_path)
 
   def convert_stream_to_h5(self, filepath, min_count, out_dir,
                            chunk_indices=10000, seed=777):
     np.random.seed(seed)
     os.makedirs(out_dir, exist_ok=True)
     keys_path = pjoin(out_dir, "keys.txt")
+    count_path = pjoin(out_dir, "count.txt")
     token_path = pjoin(out_dir, "token.h5")
-    self.logger.info("save key and token to %s, %s",
-                     keys_path, token_path)
-    self.load_stream_vocab(filepath, min_count, keys_path)
+    self.logger.info("save key, count, token to %s, %s, %s",
+                     keys_path, count_path, token_path)
+    self.load_stream_vocab(filepath, min_count, keys_path, count_path)
     full_num_lines = self.obj.load_stream_file(filepath)
     pbar = aux.Progbar(full_num_lines, unit_name="line")
     processed = 0
