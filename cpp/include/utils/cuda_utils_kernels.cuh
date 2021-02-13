@@ -23,6 +23,9 @@
 #include <utility>
 #include "utils/types.hpp"
 
+using thrust::random::default_random_engine;
+using thrust::random::uniform_int_distribution;
+
 namespace cusim {
 
 // Error Checking utilities, checks status codes from cuda calls

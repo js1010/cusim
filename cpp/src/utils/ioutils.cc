@@ -175,7 +175,7 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path, std::string cou
     line = std::to_string(word_count_[word_list_[i]]) + "\n";
     fout2.write(line.c_str(), line.size());
   }
-  fout.close();
+  fout1.close(); fout2.close();
 }
 
 }  // namespace cusim

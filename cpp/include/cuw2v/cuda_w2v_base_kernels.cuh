@@ -6,9 +6,6 @@
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
 
-using thrust::random::default_random_engine;
-using thrust::random::uniform_int_distribution;
-
 namespace cusim {
 
 

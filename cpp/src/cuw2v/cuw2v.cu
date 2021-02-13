@@ -10,6 +10,15 @@
 
 namespace cusim {
 
+struct HuffmanTreeNode {
+  float count;
+  int index, left, right;
+  HuffmanTreeNode(float count0, int index0, int left0, int right0) {
+    count = count0; index = index0; left = left0; right = right0;
+  }
+};
+
+std::vector<HuffmanTreeNode> huffman_nodes;
 bool CompareIndex(int lhs, int rhs) {
   return huffman_nodes[lhs].count > huffman_nodes[rhs].count;
 }

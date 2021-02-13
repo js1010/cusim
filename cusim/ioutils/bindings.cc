@@ -62,7 +62,7 @@ PYBIND11_PLUGIN(ioutils_bind) {
   .def("tokenize_stream", &IoUtilsBind::TokenizeStream,
       py::arg("num_lines"), py::arg("num_threads"))
   .def("get_word_vocab", &IoUtilsBind::GetWordVocab,
-      py::arg("min_count"), py::arg("keys_path"), py::Arg("count_path"))
+      py::arg("min_count"), py::arg("keys_path"), py::arg("count_path"))
   .def("get_token", &IoUtilsBind::GetToken,
       py::arg("indices"), py::arg("indptr"), py::arg("offset"))
   .def("__repr__",

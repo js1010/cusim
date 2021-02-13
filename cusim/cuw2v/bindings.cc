@@ -29,7 +29,7 @@ class CuW2VBind {
     float_array _emb_out(emb_out);
     auto emb_in_buffer = _emb_in.request();
     auto emb_out_buffer = _emb_out.request();
-    if (emb_in_buffer.ndim != 2 or emb_out_buffer_buffer.ndim != 2 or
+    if (emb_in_buffer.ndim != 2 or emb_out_buffer.ndim != 2 or
         emb_in_buffer.shape[1] != emb_out_buffer.shape[1]) {
       throw std::runtime_error("invalid emb_in or emb_out");
     }
@@ -39,7 +39,7 @@ class CuW2VBind {
 
   void BuildRandomTable(py::object& word_count, int table_size, int num_threads) {
     float_array _word_count(word_count);
-    auto wc_buffer = _word_count.requiest();
+    auto wc_buffer = _word_count.request();
     if (wc_buffer.ndim != 1) {
       throw std::runtime_error("invalid word count");
     }
@@ -49,7 +49,7 @@ class CuW2VBind {
 
   void BuildHuffmanTree(py::object& word_count) {
     float_array _word_count(word_count);
-    auto wc_buffer = _word_count.requiest();
+    auto wc_buffer = _word_count.request();
     if (wc_buffer.ndim != 1) {
       throw std::runtime_error("invalid word count");
     }
