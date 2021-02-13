@@ -52,6 +52,7 @@ class CuW2V {
   DeviceInfo dev_info_;
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
+  std::unique_ptr<CuSimLogger> logger_container_;
   int block_cnt_, block_dim_;
   int num_dims_, num_words_, window_size_;
   float *emb_in_, *emb_out_, lr_;

@@ -197,7 +197,7 @@ def setup_package():
     download_url="https://github.com/js1010/cusim/releases",
     include_package_data=False,
     license='Apache2',
-    packages=['cusim/', "cusim/ioutils/", "cusim/culda/"],
+    packages=['cusim/', "cusim/ioutils/", "cusim/culda/", "cusim/cuw2v/"],
     install_requires=INSTALL_REQUIRES,
     cmdclass=cmdclass,
     classifiers=[_f for _f in CLASSIFIERS.split('\n') if _f],

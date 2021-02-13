@@ -51,7 +51,7 @@ message CuW2VConfigProto {
   optional int32 seed = 14 [default = 777];
   optional int32 table_seed = 15 [default = 777];
   optional int32 cuda_seed = 16 [default = 777];
-  optional int32 random_size = 17 [default = 1000000];
+  optional int32 random_size = 12 [default = 1000000];
 
   optional int32 neg = 17 [default = 10];
   // as recommended in w2v paper

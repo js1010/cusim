@@ -45,6 +45,7 @@ class IoUtils {
   std::ifstream stream_fin_;
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
+  std::unique_ptr<CuSimLogger> logger_container_;
   std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
   int num_lines_, remain_lines_;

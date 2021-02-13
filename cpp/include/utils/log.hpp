@@ -7,7 +7,7 @@
 // reference: https://github.com/kakao/buffalo/blob/5f571c2c7d8227e6625c6e538da929e4db11b66d/lib/misc/log.cc
 #pragma once
 #include <memory>
-
+#include <string>
 #define SPDLOG_EOL ""
 #define SPDLOG_TRACE_ON
 #include "spdlog/spdlog.h"
@@ -32,6 +32,7 @@ namespace cusim {
 class CuSimLogger {
  public:
   CuSimLogger();
+  explicit CuSimLogger(std::string name);
   std::shared_ptr<spdlog::logger>& get_logger();
   void set_log_level(int level);
   int get_log_level();

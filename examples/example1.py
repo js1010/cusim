@@ -12,7 +12,7 @@ import fire
 import h5py
 import numpy as np
 from gensim import downloader as api
-from cusim import aux, IoUtils, CuLDA
+from cusim import aux, IoUtils, CuLDA, CuW2V
 
 LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
@@ -46,7 +46,7 @@ def run_lda():
   opt = {
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
-    "skip_preprocess":True,
+    # "skip_preprocess":True,
   }
   lda = CuLDA(opt)
   lda.train_model()
@@ -65,6 +65,16 @@ def run_lda():
       prob = beta[words[j], i]
       print(f"rank {j + 1}. word: {word}, prob: {prob}")
   h5f.close()
+
+def run_w2v():
+  opt = {
+    "c_log_level": 3,
+    "data_path": DATA_PATH,
+    "processed_data_dir": PROCESSED_DATA_DIR,
+    # "skip_preprocess":True,
+  }
+  w2v = CuW2V(opt)
+  w2v.train_model()
 
 if __name__ == "__main__":
   fire.Fire()

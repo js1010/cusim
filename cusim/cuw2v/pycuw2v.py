@@ -86,7 +86,10 @@ class CuW2V:
   def train_model(self):
     self.preprocess_data()
     self.init_model()
-    if not self.opt.neg:
+    if self.opt.neg:
+      self.obj.build_random_table( \
+        self.word_count, self.opt.random_size, self.opt.num_threads)
+    else:
       self.obj.build_huffman_tree(self.word_count)
     h5f = h5py.File(pjoin(self.opt.processed_data_dir, "token.h5"), "r")
     for epoch in range(1, self.opt.epochs + 1):
@@ -112,9 +115,6 @@ class CuW2V:
       offset = next_offset
 
       # call cuda kernel
-      if self.opt.neg:
-        self.obj.build_random_table( \
-          self.word_count, self.opt.random_size, self.opt.num_threads)
       _loss_nume, _loss_deno = \
         self.obj.feed_data(cols, indptr)
 
