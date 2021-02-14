@@ -96,10 +96,11 @@ def run_cusim_w2v():
     "num_dims": 100,
     "hyper_threads": 100,
     "epochs": 10,
+    "lr": 0.001,
     "io": {
       "lower": False
     },
-    "neg": 0,
+    "neg": 10,
     "skip_gram": True,
     # "pretrained_model": {
     #   "filename": "./res/gensim.w2v.model",
@@ -126,7 +127,8 @@ def run_gensim_w2v():
 def evaluate_w2v_model(model=GENSIM_W2V_PATH):
   LOGGER.info("load word2vec format model from %s", model)
   model = gensim.models.KeyedVectors.load_word2vec_format(model)
-  results = model.wv.evaluate_word_pairs(datapath("wordsim353.tsv"))
+  results = model.wv.evaluate_word_pairs(datapath("wordsim353.tsv"),
+                                         case_insensitive=False)
   LOGGER.info("evaluation results: %s", results)
 
 

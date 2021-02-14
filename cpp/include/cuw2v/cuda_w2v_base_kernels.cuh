@@ -6,7 +6,7 @@
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
 
-#define MAX_EXP 6
+// #define MAX_EXP 6
 
 namespace cusim {
 
@@ -16,6 +16,7 @@ void PositiveFeedback(const float* vec1, float* vec2, float* grad,
     float& loss_nume, float& loss_deno, const int num_dims, const float lr) {
   static __shared__ float g;
   float dot = Dot(vec1, vec2, num_dims);
+  // if (dot <= -MAX_EXP or dot >= MAX_EXP) return;
   if (threadIdx.x == 0) {
     float exp_dot = expf(-dot);
     g = exp_dot / (1 + exp_dot) * lr;
@@ -35,6 +36,7 @@ void NegativeFeedback(const float* vec1, float* vec2, float* grad,
     float& loss_nume, float& loss_deno, const int num_dims, const float lr) {
   static __shared__ float g;
   float dot = Dot(vec1, vec2, num_dims);
+  // if (dot <= -MAX_EXP or dot >= MAX_EXP) return;
   if (threadIdx.x == 0) {
     float exp_dot = expf(dot);
     g = exp_dot / (1 + exp_dot) * lr;

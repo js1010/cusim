@@ -98,7 +98,7 @@ __global__ void W2VHsCbowKernel(
         grad[k] = 0.0f;
         cbow[k] = 0.0f;
       }
-
+      
       // compute cbow
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;

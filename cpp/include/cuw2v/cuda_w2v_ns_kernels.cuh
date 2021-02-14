@@ -120,7 +120,7 @@ __global__ void W2VNegCbowKernel(
       for (int k = 0; k < neg; ++k){
         if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
         __syncthreads();
-          if (neg_word == cols[j]) continue;
+        if (neg_word == cols[j]) continue;
         NegativeFeedback(cbow, emb_out + num_dims * neg_word, 
             grad, _loss_nume, _loss_deno, num_dims, lr);
       }
