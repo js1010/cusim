@@ -61,7 +61,7 @@ class CuLDA:
     self.num_docs = h5f["indptr"].shape[0] - 1
     h5f.close()
     with open(self.opt.keys_path, "rb") as fin:
-      self.words = [line.decode("utf8").strip() for line in fin]
+      self.words = [line.strip().decode("utf8") for line in fin]
     self.num_words = len(self.words)
 
     self.logger.info("number of words: %d, docs: %d",
@@ -160,10 +160,12 @@ class CuLDA:
 
     self.obj.push()
 
-  def save_model(self, model_path):
-    self.logger.info("save model path: %s", model_path)
-    h5f = h5py.File(model_path, "w")
+  def save_h5_model(self, filepath):
+    self.logger.info("save h5 format model path to %s", filepath)
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    h5f = h5py.File(filepath, "w")
     h5f.create_dataset("alpha", data=self.alpha)
     h5f.create_dataset("beta", data=self.beta)
-    h5f.create_dataset("keys", data=np.array(self.words))
+    h5f.create_dataset("keys", data=np.array([word.encode("utf")
+                                              for word in self.words]))
     h5f.close()

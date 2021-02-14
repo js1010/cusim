@@ -145,7 +145,8 @@ class CuW2V:
     h5f = h5py.File(filename, "w")
     h5f.create_dataset("emb_in", data=self.emb_in)
     h5f.create_dataset("emb_out", data=self.emb_out)
-    h5f.create_dataset("keys", data=np.array(self.words))
+    h5f.create_dataset("keys", data=np.array([word.encode("utf")
+                                              for word in self.words]))
     h5f.close()
 
   def save_word2vec_format(self, filename, binary=False, prefix=""):
