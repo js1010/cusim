@@ -68,7 +68,7 @@ def preprocess_line(line, tokenizer, lemmatizer):
   line = [lemmatizer.lemmatize(token) for token in line]
   return " ".join(line)
 
-def run_cusim_w2v():
+def run_cusim():
   download()
   opt = {
     "data_path": DATA_PATH,
@@ -85,14 +85,15 @@ def run_cusim_w2v():
     "skip_gram": False,
     "cbow_mean": False,
   }
-  w2v = CuW2V(opt)
   start = time.time()
+  w2v = CuW2V(opt)
   w2v.train_model()
   LOGGER.info("elapsed for cusim w2v training: %.4e sec", time.time() - start)
   w2v.save_word2vec_format(CUSIM_MODEL, binary=False)
   evaluate_w2v_model(CUSIM_MODEL)
 
-def run_gensim_w2v():
+def run_gensim():
+  download()
   start = time.time()
   model = gensim.models.Word2Vec(corpus_file=DATA_PATH, min_alpha=0.001,
                                  min_count=5, sg=False, hs=True, workers=8,
