@@ -19,6 +19,9 @@ import gensim
 from gensim import downloader as api
 from gensim.test.utils import datapath
 
+from nltk.tokenize import RegexpTokenizer
+# from nltk.stem.wordnet import WordNetLemmatizer
+
 from cusim import aux, IoUtils, CuLDA, CuW2V
 
 
@@ -96,7 +99,7 @@ def run_cusim_w2v():
     "num_dims": 100,
     "hyper_threads": 100,
     "epochs": 10,
-    "lr": 0.01,
+    "lr": 0.001,
     "io": {
       "lower": False
     },
@@ -132,6 +135,29 @@ def evaluate_w2v_model(model=GENSIM_W2V_PATH):
   results = model.wv.evaluate_word_pairs(datapath("wordsim353.tsv"),
                                          case_insensitive=False)
   LOGGER.info("evaluation results: %s", results)
+
+
+def run_gensim_lda():
+  download()
+  docs = []
+  with open(DATA_PATH, "rb") as fin:
+    for line in fin:
+      docs.append(line.decode("utf8").strip())
+
+  tokenizer = RegexpTokenizer(r'\w+')
+  for idx, doc in tqdm.tqdm(enumerate(docs)):
+    docs[idx] = doc.lower()
+    docs[idx] = tokenizer.tokenize(docs[idx])
+  docs = [[token for token in doc if not token.isnumeric()]
+          for doc in docs]
+  docs = [[token for token in doc if len(token) > 1] for doc in docs]
+  fout = open(DATA_PATH + ".tmp", "wb")
+  for doc in tqdm.tqdm(docs):
+    fout.write((" ".join(doc) + "\n").encode("utf8"))
+  fout.close()
+  # lemmatizer = WordNetLemmatizer()
+  # docs = [[lemmatizer.lemmatize(token) for token in doc]
+  #         for doc in docs]
 
 
 if __name__ == "__main__":
