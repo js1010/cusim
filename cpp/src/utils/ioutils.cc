@@ -180,7 +180,7 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path, std::string cou
   fout1.close(); fout2.close();
 }
 
-std::tuple<int64_t, int, int64_t> IoUtils::ReadBagOfWordsHeader(std::string filename) {
+std::tuple<int64_t, int, int64_t> IoUtils::ReadBagOfWordsHeader(std::string filepath) {
   INFO("read bag of words file: {} (format reference: https://archive.ics.uci.edu/ml/datasets/bag+of+words)",
       filepath);
   if (fin_.is_open()) fin_.close();
@@ -207,7 +207,8 @@ void IoUtils::ReadBagOfWordsContent(int64_t* rows, int* cols, float* counts, con
   float count;
   for (int i = 0; i < num_lines; ++i) {
     getline(fin_, line);
-    std::vector<string> line_vec = ParseLine(line);
+    std::vector<std::string> line_vec;
+    ParseLine(line, line_vec);
     sstr << line_vec[0];
     sstr >> row;
     col = std::stoi(line_vec[1]);

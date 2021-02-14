@@ -47,8 +47,8 @@ class IoUtilsBind {
     obj_.GetToken(_rows.mutable_data(0), _cols.mutable_data(0), _indptr.mutable_data(0));
   }
 
-  std::tuple<int64_t, int, int64_t> ReadBagOfWordsHeader(std::string filename) {
-    return obj_.ReadBagOfWords(filename);
+  std::tuple<int64_t, int, int64_t> ReadBagOfWordsHeader(std::string filepath) {
+    return obj_.ReadBagOfWordsHeader(filepath);
   }
 
   void ReadBagOfWordsContent(py::object& rows, py::object& cols,
@@ -64,7 +64,7 @@ class IoUtilsBind {
       throw std::runtime_error("invalid shape");
     }
     obj_.ReadBagOfWordsContent(_rows.mutable_data(0),
-        _col.mutable_data(0), _counts.mutable_data(0), num_lines);
+        _cols.mutable_data(0), _counts.mutable_data(0), num_lines);
   }
 
  private:
@@ -87,7 +87,7 @@ PYBIND11_PLUGIN(ioutils_bind) {
   .def("get_token", &IoUtilsBind::GetToken,
       py::arg("indices"), py::arg("indptr"), py::arg("offset"))
   .def("read_bag_of_words_header", &IoUtilsBind::ReadBagOfWordsHeader,
-      py::arg("filename"))
+      py::arg("filepath"))
   .def("read_bag_of_words_content", &IoUtilsBind::ReadBagOfWordsContent,
       py::arg("rows"), py::arg("cols"), py::arg("counts"))
   .def("__repr__",

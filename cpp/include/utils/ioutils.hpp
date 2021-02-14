@@ -14,6 +14,7 @@
 #include <utility>
 #include <queue>
 #include <deque>
+#include <sstream>
 #include <functional>
 #include <vector>
 #include <cmath>
@@ -36,8 +37,8 @@ class IoUtils {
   std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
   void GetWordVocab(int min_count, std::string keys_path, std::string count_path);
   void GetToken(int* rows, int* cols, int* indptr);
-  std::tuple<int64_t, int, int64_t> ReadBagOfWordsHeader(std::string filename);
-  void ReadBagOfWordsContent(int64_t rows, int* cols, float* counts, const int num_lines);
+  std::tuple<int64_t, int, int64_t> ReadBagOfWordsHeader(std::string filepath);
+  void ReadBagOfWordsContent(int64_t* rows, int* cols, float* counts, const int num_lines);
 
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
