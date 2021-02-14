@@ -41,8 +41,7 @@ class CuW2V {
   bool Init(std::string opt_path);
   void LoadModel(float* emb_in, float* emb_out);
   void BuildHuffmanTree(const float* word_count, const int num_words);
-  void BuildRandomTable(const float* word_count, const int num_words,
-      const int table_size, const int num_threads);
+  void BuildRandomTable(const float* word_count, const int num_words, const int table_size);
   int GetBlockCnt();
   std::pair<float, float> FeedData(const int* cols, const int* indptr,
       const int num_cols, const int num_indptr);
@@ -69,7 +68,7 @@ class CuW2V {
 
   // variables to construct random table
   thrust::device_vector<int> dev_random_table_;
-  int random_size_, table_seed_, cuda_seed_;
+  int random_size_, seed_;
   thrust::device_vector<default_random_engine> dev_rngs_;
 };
 

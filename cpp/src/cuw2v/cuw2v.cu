@@ -56,47 +56,32 @@ bool CuW2V::Init(std::string opt_path) {
   // if zero, we will use hierarchical softmax
   neg_ = opt_["neg"].int_value(); 
   
-  // random seed 
-  table_seed_ = opt_["table_seed"].int_value();
-  cuda_seed_ = opt_["cuda_seed"].int_value();
+  // random seed
+  seed_ = opt_["seed"].int_value();
   dev_rngs_.resize(block_cnt_);
   InitRngsKernel<<<block_cnt_, 1>>>(
-    thrust::raw_pointer_cast(dev_rngs_.data()), cuda_seed_);
+    thrust::raw_pointer_cast(dev_rngs_.data()), seed_);
 
   INFO("num_dims: {}, block_dim: {}, block_cnt: {}, objective type: {}, neg: {}", 
       num_dims_, block_dim_, block_cnt_, sg_? "skip gram": "cbow", neg_);
   return true;
 }
 
-void CuW2V::BuildRandomTable(const float* word_count, const int num_words, 
-    const int table_size, const int num_threads) {
+void CuW2V::BuildRandomTable(const float* word_count, const int num_words, const int table_size) {
   num_words_ = num_words;
-  random_size_ = table_size;
-  std::vector<float> acc;
-  float cumsum = 0;
+  std::vector<int> host_random_table;
   for (int i = 0; i < num_words; ++i) {
-    acc.push_back(cumsum);
-    cumsum += word_count[i];
+    int weight = std::max(1, static_cast<int>(word_count[i] * table_size));
+    for (int j = 0; j < weight; ++j)
+      host_random_table.push_back(j);
   }
-
+  
+  random_size_ = host_random_table.size();
   dev_random_table_.resize(random_size_);
-  std::vector<int> host_random_table(random_size_);
-  #pragma omp parallel num_threads(num_threads)
-  {
-    const unsigned int table_seed = table_seed_ + omp_get_thread_num();
-    std::mt19937 rng(table_seed);
-    std::uniform_real_distribution<float> dist(0.0f, cumsum);
-    #pragma omp for schedule(static)
-    for (int i = 0; i < random_size_; ++i) {
-      float r = dist(rng);
-      int pos = std::lower_bound(acc.begin(), acc.end(), r) - acc.begin();
-      host_random_table[i] = pos;
-    }
-  }
-  table_seed_ += num_threads;
-
   thrust::copy(host_random_table.begin(), host_random_table.end(), dev_random_table_.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
+  
+  INFO("random table initialzied, size: {} => {}", table_size, random_size_);
 }
 
 void CuW2V::BuildHuffmanTree(const float* word_count, const int num_words) {

@@ -60,9 +60,8 @@ class CuW2V:
     with open(keys_path, "rb") as fin:
       self.words = [line.strip().decode("utf8") for line in fin]
     with open(count_path, "rb") as fin:
-      self.word_count = np.array([float(line.strip()) for line in fin],
-                                 dtype=np.float32)
-    self.word_count = np.power(self.word_count, self.opt.count_power)
+      self.word_count = np.array([int(line.strip()) for line in fin],
+                                 dtype=np.int64)
     self.num_words = len(self.words)
     assert len(self.words) == len(self.word_count)
 
@@ -74,11 +73,14 @@ class CuW2V:
     self.logger.info("number of words: %d, docs: %d",
                      self.num_words, self.num_docs)
 
+    # normalize word count
+    word_count = np.power(self.word_count, self.opt.count_power,
+                          dtype=np.float32)
+    word_count /= np.sum(self.word_count)
     if self.opt.neg:
-      self.obj.build_random_table( \
-        self.word_count, self.opt.random_size, self.opt.num_threads)
+      self.obj.build_random_table(word_count, self.opt.random_size)
     else:
-      self.obj.build_huffman_tree(self.word_count)
+      self.obj.build_huffman_tree(word_count)
 
     # random initialize alpha and beta
     np.random.seed(self.opt.seed)
