@@ -64,7 +64,7 @@ class CuW2V {
   thrust::device_vector<int> dev_points_, dev_hs_indptr_;
 
   // related to negative sampling / hierarchical softmax and skip gram / cbow
-  bool sg_, use_mean_;
+  bool sg_, cbow_mean_;
   int neg_;
 
   // variables to construct random table

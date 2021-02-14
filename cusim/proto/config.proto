@@ -68,7 +68,7 @@ message CuW2VConfigProto {
   // as recommended in w2v paper
   optional double count_power = 18 [default = 0.75];
   optional bool skip_gram = 19 [default = true];
-  optional bool use_mean = 20 [default = true];
+  optional bool cbow_mean = 20 [default = true];
   optional double lr = 21 [default = 0.001];
   optional int32 window_size = 22 [default = 5];
   optional int32 num_threads = 23 [default = 4];

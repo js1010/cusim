@@ -99,6 +99,8 @@ def run_cusim_w2v():
     "io": {
       "lower": False
     },
+    "neg": 0,
+    "skip_gram": True,
     # "pretrained_model": {
     #   "filename": "./res/gensim.w2v.model",
     # }
@@ -113,9 +115,9 @@ def run_cusim_w2v():
 
 def run_gensim_w2v():
   start = time.time()
-  model = gensim.models.Word2Vec(corpus_file=DATA_PATH,
-                                 min_count=5, sg=True, hs=False, workers=8,
-                                 alpha=0.001, negative=10, iter=3)
+  model = gensim.models.Word2Vec(corpus_file=DATA_PATH, min_alpha=0.001,
+                                 min_count=5, sg=False, hs=True, workers=8,
+                                 alpha=0.001, negative=10, iter=10)
   LOGGER.info("elapsed for gensim w2v training: %.4e sec", time.time() - start)
   model.wv.save_word2vec_format(GENSIM_W2V_PATH, binary=False)
   LOGGER.info("gensim w2v model is saved to %s", GENSIM_W2V_PATH)

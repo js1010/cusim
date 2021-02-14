@@ -49,7 +49,7 @@ bool CuW2V::Init(std::string opt_path) {
   block_dim_ = opt_["block_dim"].int_value();
   block_cnt_ = opt_["hyper_threads"].number_value() * (dev_info_.cores / block_dim_);
   sg_ = opt_["skip_gram"].bool_value();
-  use_mean_ = opt_["use_mean"].bool_value();
+  cbow_mean_ = opt_["cbow_mean"].bool_value();
   window_size_ = opt_["window_size"].int_value();
   lr_ = opt_["lr"].number_value();
 
@@ -80,7 +80,7 @@ void CuW2V::BuildRandomTable(const float* word_count, const int num_words,
   }
 
   dev_random_table_.resize(random_size_);
-  std::vector<int> host_random_table(table_size);
+  std::vector<int> host_random_table(random_size_);
   #pragma omp parallel num_threads(num_threads)
   {
     const unsigned int table_seed = table_seed_ + omp_get_thread_num();
@@ -224,7 +224,7 @@ std::pair<float, float> CuW2V::FeedData(const int* cols, const int* indptr,
         thrust::raw_pointer_cast(dev_emb_out_.data()),
         thrust::raw_pointer_cast(dev_loss_nume.data()),
         thrust::raw_pointer_cast(dev_loss_deno.data()),
-        use_mean_, lr_);
+        cbow_mean_, lr_);
     }
   } else {
     if (sg_) {
@@ -255,7 +255,7 @@ std::pair<float, float> CuW2V::FeedData(const int* cols, const int* indptr,
         thrust::raw_pointer_cast(dev_emb_out_.data()),
         thrust::raw_pointer_cast(dev_loss_nume.data()),
         thrust::raw_pointer_cast(dev_loss_deno.data()),
-        use_mean_, lr_);
+        cbow_mean_, lr_);
 
     }
 

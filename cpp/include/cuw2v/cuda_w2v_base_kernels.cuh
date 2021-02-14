@@ -6,6 +6,8 @@
 #pragma once
 #include "utils/cuda_utils_kernels.cuh"
 
+#define MAX_EXP 6
+
 namespace cusim {
 
 

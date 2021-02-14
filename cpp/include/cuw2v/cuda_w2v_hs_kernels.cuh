@@ -39,11 +39,11 @@ __global__ void W2VHsSgKernel(
       __syncthreads();
       int beg2 = max(beg, j - window_size + reduced_windows);
       int end2 = min(end, j + window_size - reduced_windows + 1);
-      float* _emb_in = emb_in + num_dims * cols[j];
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
-        int beg3 = hs_indptr[cols[k]];
-        int end3 = hs_indptr[cols[k] + 1];
+        float* _emb_in = emb_in + num_dims * cols[k];
+        int beg3 = hs_indptr[cols[j]];
+        int end3 = hs_indptr[cols[j] + 1];
         for (int l = beg3; l < end3; ++l) {
           if (codes[l]) {
             PositiveFeedback(_emb_in, emb_out + num_dims * points[l],
@@ -55,7 +55,7 @@ __global__ void W2VHsSgKernel(
           __syncthreads();
         }
         for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
-          emb_in[num_dims * cols[j] + l] += grad[l];
+          _emb_in[l] += grad[l];
           grad[l] = 0.0f;
         }
         __syncthreads();
@@ -70,7 +70,7 @@ __global__ void W2VHsCbowKernel(
   const int num_indptr, const int num_dims, const int window_size, default_random_engine* rngs,
   float* emb_in, float* emb_out, 
   float* loss_nume, float* loss_deno, 
-  const bool use_mean, const float lr) {
+  const bool cbow_mean, const float lr) {
   
   default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
@@ -106,7 +106,7 @@ __global__ void W2VHsCbowKernel(
           cbow[l] += emb_in[num_dims * cols[k] + l];
         }
       }
-      if (use_mean) {
+      if (cbow_mean) {
         for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
           cbow[k] /= (end2 - beg2 - 1);
         }
@@ -126,8 +126,8 @@ __global__ void W2VHsCbowKernel(
         __syncthreads();
       }
       
-      // normalize grad if use_mean = true
-      if (use_mean) {
+      // normalize grad if cbow_mean = true
+      if (cbow_mean) {
         for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
           grad[k] /= (end2 - beg2 - 1);
         }

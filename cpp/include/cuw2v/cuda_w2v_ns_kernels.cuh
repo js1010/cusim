@@ -39,20 +39,21 @@ __global__ void W2VNegSgKernel(
       __syncthreads();
       int beg2 = max(beg, j - window_size + reduced_windows);
       int end2 = min(end, j + window_size - reduced_windows + 1);
-      float* _emb_in = emb_in + num_dims * cols[j];
       for (int k = beg2; k < end2; ++k) {
         if (k == j) continue;
-        PositiveFeedback(_emb_in, emb_out + num_dims * cols[k], 
+        float* _emb_in = emb_in + num_dims * cols[k];
+        PositiveFeedback(_emb_in, emb_out + num_dims * cols[j], 
             grad, _loss_nume, _loss_deno, num_dims, lr);
         for (int l = 0; l < neg; ++l) {
           if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
           __syncthreads();
+          if (neg_word == cols[j]) continue;
           NegativeFeedback(_emb_in, emb_out + num_dims * neg_word, 
               grad, _loss_nume, _loss_deno, num_dims, lr);
         }
         __syncthreads();
         for (int l = threadIdx.x; l < num_dims; l += blockDim.x) {
-          emb_in[num_dims * cols[j] + l] += grad[l];
+          _emb_in[l] += grad[l];
           grad[l] = 0.0f;
         }
         __syncthreads();
@@ -66,7 +67,7 @@ __global__ void W2VNegCbowKernel(
   const int* random_table, default_random_engine* rngs, const int random_size,
   const int num_indptr, const int num_dims, const int neg, const int window_size, 
   float* emb_in, float* emb_out, 
-  float* loss_nume, float* loss_deno, const bool use_mean, const float lr) {
+  float* loss_nume, float* loss_deno, const bool cbow_mean, const float lr) {
   
   default_random_engine& rng = rngs[blockIdx.x];
   float& _loss_nume = loss_nume[blockIdx.x];
@@ -104,7 +105,7 @@ __global__ void W2VNegCbowKernel(
           cbow[l] += emb_in[num_dims * cols[k] + l];
         }
       }
-      if (use_mean) {
+      if (cbow_mean) {
         for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
           cbow[k] /= (end2 - beg2 - 1);
         }
@@ -119,13 +120,14 @@ __global__ void W2VNegCbowKernel(
       for (int k = 0; k < neg; ++k){
         if (threadIdx.x == 0) neg_word = random_table[dist_neg(rng)];
         __syncthreads();
+          if (neg_word == cols[j]) continue;
         NegativeFeedback(cbow, emb_out + num_dims * neg_word, 
             grad, _loss_nume, _loss_deno, num_dims, lr);
       }
       __syncthreads();
       
-      // normalize grad if use_mean = true
-      if (use_mean) {
+      // normalize grad if cbow_mean = true
+      if (cbow_mean) {
         for (int k = threadIdx.x; k < num_dims; k += blockDim.x) {
           grad[k] /= (end2 - beg2 - 1);
         }
