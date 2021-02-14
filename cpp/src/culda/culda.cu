@@ -55,50 +55,49 @@ void CuLDA::LoadModel(float* alpha, float* beta,
   // copy to device
   thrust::copy(grad_alpha_, grad_alpha_ + block_cnt_ * num_topics_, dev_grad_alpha_.begin());
   thrust::copy(new_beta_, new_beta_ + num_words_ * num_topics_, dev_new_beta_.begin());
-  dev_gamma_.resize(num_topics_ * block_cnt_);
-  dev_new_gamma_.resize(num_topics_ * block_cnt_);
-  dev_phi_.resize(num_topics_ * block_cnt_);
-  
-  // set mutex
-  dev_mutex_.resize(num_words_);
-  std::vector<int> host_mutex(num_words_, 0);
-  thrust::copy(host_mutex.begin(), host_mutex.end(), dev_mutex_.begin());
+  // set locks
+  dev_locks_.resize(num_words_);
+  std::vector<int> host_locks(num_words_, 0);
+  thrust::copy(host_locks.begin(), host_locks.end(), dev_locks_.begin());
   
   CHECK_CUDA(cudaDeviceSynchronize());
 }
 
 std::pair<float, float> CuLDA::FeedData(
-    const int* cols, const int* indptr, const bool* vali,
-    const int num_cols, const int num_indptr, const int num_iters) {
+    const int* cols, const int* indptr, 
+    const bool* vali, const float* counts,
+    const int num_cols, const int num_indptr, 
+    const int num_iters) {
   
   // copy feed data to GPU memory
   thrust::device_vector<int> dev_cols(num_cols);
   thrust::device_vector<int> dev_indptr(num_indptr + 1);
   thrust::device_vector<bool> dev_vali(num_cols);
+  thrust::device_vector<float> dev_counts(num_cols);
   thrust::device_vector<float> dev_train_losses(block_cnt_, 0.0f);
   thrust::device_vector<float> dev_vali_losses(block_cnt_, 0.0f);
   thrust::copy(cols, cols + num_cols, dev_cols.begin());
   thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
   thrust::copy(vali, vali + num_cols, dev_vali.begin());
+  thrust::copy(counts, counts + num_cols, dev_counts.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
   DEBUG0("copy feed data to GPU memory");
 
   // run E step in GPU
-  EstepKernel<<<block_cnt_, block_dim_>>>(
+  EstepKernel<<<block_cnt_, block_dim_, 
+    3 * num_topics_ * sizeof(float)>>>(
     thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
     thrust::raw_pointer_cast(dev_vali.data()),
+    thrust::raw_pointer_cast(dev_counts.data()),
     num_cols, num_indptr, num_topics_, num_iters,
-    thrust::raw_pointer_cast(dev_gamma_.data()),
-    thrust::raw_pointer_cast(dev_new_gamma_.data()),
-    thrust::raw_pointer_cast(dev_phi_.data()),
     thrust::raw_pointer_cast(dev_alpha_.data()),
     thrust::raw_pointer_cast(dev_beta_.data()),
     thrust::raw_pointer_cast(dev_grad_alpha_.data()),
     thrust::raw_pointer_cast(dev_new_beta_.data()),
     thrust::raw_pointer_cast(dev_train_losses.data()),
     thrust::raw_pointer_cast(dev_vali_losses.data()),
-    thrust::raw_pointer_cast(dev_mutex_.data()));
+    thrust::raw_pointer_cast(dev_locks_.data()));
   CHECK_CUDA(cudaDeviceSynchronize());
   DEBUG0("run E step in GPU");
 

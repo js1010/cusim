@@ -26,18 +26,19 @@ float Digamma(float x) {
 }
 
 __global__ void EstepKernel(
-  const int* cols, const int* indptr, const bool* vali,
-  const int num_cols, const int num_indptr,
+  const int* cols, const int* indptr, 
+  const bool* vali, const float* counts,
+  const int num_cols, const int num_indptr, 
   const int num_topics, const int num_iters,
-  float* gamma, float* new_gamma, float* phi,
   const float* alpha, const float* beta,
   float* grad_alpha, float* new_beta, 
-  float* train_losses, float* vali_losses, int* mutex) {
+  float* train_losses, float* vali_losses, int* locks) {
   
   // storage for block
-  float* _gamma = gamma + num_topics * blockIdx.x;
-  float* _new_gamma = new_gamma + num_topics * blockIdx.x;
-  float* _phi = phi + num_topics * blockIdx.x;
+  extern __shared__ float shared_memory[];
+  float* _gamma = &shared_memory[0];
+  float* _new_gamma = &shared_memory[num_topics];
+  float* _phi = &shared_memory[2 * num_topics];
   float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
@@ -58,7 +59,7 @@ __global__ void EstepKernel(
       for (int k = beg; k < end; ++k) {
         const int w = cols[k];
         const bool _vali = vali[k];
-        
+        const float c = counts[k]; 
         // compute phi
         if (not _vali or j + 1 == num_iters) {
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
@@ -70,7 +71,7 @@ __global__ void EstepKernel(
 
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             _phi[l] /= phi_sum;
-            if (not _vali) _new_gamma[l] += _phi[l];
+            if (not _vali) _new_gamma[l] += _phi[l] * c;
           }
           __syncthreads();
         }
@@ -78,28 +79,28 @@ __global__ void EstepKernel(
         if (j + 1 == num_iters) {
           // write access of w th vector of new_beta 
           if (threadIdx.x == 0) {
-            while (atomicCAS(&mutex[w], 0, 1)) {}
+            while (atomicCAS(&locks[w], 0, 1)) {}
           } 
 
           __syncthreads();
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             if (j + 1 == num_iters) { 
-              if (not _vali) new_beta[w * num_topics + l] += _phi[l];
+              if (not _vali) new_beta[w * num_topics + l] += _phi[l] * c;
               _phi[l] *= beta[w * num_topics + l];
             }
           }
           __syncthreads();
 
           // release lock
-          if (threadIdx.x == 0) mutex[w] = 0;
+          if (threadIdx.x == 0) locks[w] = 0;
           __syncthreads();
 
           float p = fmaxf(EPS, ReduceSum(_phi, num_topics));
           if (threadIdx.x == 0) {
             if (_vali)
-              vali_losses[blockIdx.x] += logf(p);
+              vali_losses[blockIdx.x] += logf(p) * c;
             else
-              train_losses[blockIdx.x] += logf(p);
+              train_losses[blockIdx.x] += logf(p) * c;
           } 
         }
         __syncthreads();

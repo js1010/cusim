@@ -113,6 +113,8 @@ class IoUtils:
                               shape=(num_lines,), chunks=True)
     counts = h5f.create_dataset("counts", dtype=np.float32,
                                 shape=(num_lines,), chunks=True)
+    vali = h5f.create_dataset("vali", dtype=np.float32,
+                              shape=(num_lines,), chunks=True)
     indptr = h5f.create_dataset("indptr", dtype=np.int64,
                                 shape=(num_docs + 1,), chunks=True)
     indptr[0] = 0
@@ -130,6 +132,8 @@ class IoUtils:
       rows[processed:processed + read_lines] = _rows
       cols[processed:processed + read_lines] = _cols
       counts[processed:processed + read_lines] = _counts
+      vali[processed:processed + read_lines] = \
+        np.random.uniform(size=(read_lines,)).astype(np.float32)
 
       # compute indptr
       prev_rows = np.zeros((read_lines,), dtype=np.int64)

@@ -15,7 +15,9 @@ message IoUtilsConfigProto {
 }
 
 message CuLDAConfigProto {
-  required string data_path = 7;
+  optional string data_path = 7;
+  required string processed_data_path = 6;
+  required string keys_path = 16;
 
   optional int32 py_log_level = 1 [default = 2];
   optional int32 c_log_level = 2 [default = 2];
@@ -23,7 +25,6 @@ message CuLDAConfigProto {
   optional int32 num_topics = 3 [default = 10];
   optional int32 block_dim = 4 [default = 32];
   optional int32 hyper_threads = 5 [default = 10];
-  optional string processed_data_dir = 6;
   optional bool skip_preprocess = 8;
   optional int32 word_min_count = 9 [default = 5];
   optional int32 batch_size = 10 [default = 100000];

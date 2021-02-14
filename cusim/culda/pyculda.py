@@ -48,23 +48,21 @@ class CuLDA:
     if self.opt.skip_preprocess:
       return
     iou = IoUtils(aux.proto_to_dict(self.opt.io))
-    if not self.opt.processed_data_dir:
-      self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
-    iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
-                             self.opt.processed_data_dir)
+    if not self.opt.processed_data_path:
+      data_dir = tempfile.TemporaryDirectory().name
+      self.opt.processed_data_path = pjoin(data_dir, "token.h5")
+    iou.convert_bow_to_h5(self.opt.data_path, self.opt.processed_data_path)
 
   def init_model(self):
-    # load voca
-    data_dir = self.opt.processed_data_dir
-    self.logger.info("load key from %s", pjoin(data_dir, "keys.txt"))
-    with open(pjoin(data_dir, "keys.txt"), "rb") as fin:
-      self.words = [line.strip() for line in fin]
-    self.num_words = len(self.words)
-
-    # count number of docs
-    h5f = h5py.File(pjoin(data_dir, "token.h5"), "r")
+    # count number of docs and load voca
+    assert os.path.exists(self.opt.processed_data_path)
+    assert os.path.exists(self.opt.keys_path)
+    h5f = h5py.File(self.opt.processed_data_path, "r")
     self.num_docs = h5f["indptr"].shape[0] - 1
     h5f.close()
+    with open(self.opt.keys_path, "rb") as fin:
+      self.words = [line.decode("utf8").strip() for line in fin]
+    self.num_words = len(self.words)
 
     self.logger.info("number of words: %d, docs: %d",
                      self.num_words, self.num_docs)
@@ -115,21 +113,20 @@ class CuLDA:
       beg, end = indptr[0], indptr[-1]
       indptr -= beg
       cols = h5f["cols"][beg:end]
+      counts = h5f["counts"][beg:end]
       vali = (h5f["vali"][beg:end] < self.opt.vali_p).astype(np.bool)
       offset = next_offset
 
       # call cuda kernel
       train_loss, vali_loss = \
         self.obj.feed_data(cols, indptr.astype(np.int32),
-                           vali, self.opt.num_iters_in_e_step)
+                           vali, counts, self.opt.num_iters_in_e_step)
 
       # accumulate loss
       train_loss_nume -= train_loss
       vali_loss_nume -= vali_loss
-      vali_cnt = np.count_nonzero(vali)
-      train_cnt = len(vali) - vali_cnt
-      train_loss_deno += train_cnt
-      vali_loss_deno += vali_cnt
+      train_loss_deno += np.sum(counts[~vali])
+      vali_loss_deno += np.sum(counts[vali])
       train_loss = train_loss_nume / (train_loss_deno + EPS)
       vali_loss = vali_loss_nume / (vali_loss_deno + EPS)
 
