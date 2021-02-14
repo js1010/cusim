@@ -64,7 +64,9 @@ def run_cusim():
   opt = {
     "data_path": data_path,
     "processed_data_path": processed_data_path,
-    "keys_path": keys_path
+    "keys_path": keys_path,
+    "num_topics": 50,
+    "num_iters_in_e_step": 20,
     # "skip_preprocess":True,
   }
   lda = CuLDA(opt)

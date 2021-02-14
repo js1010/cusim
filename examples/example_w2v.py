@@ -73,11 +73,7 @@ def run_cusim():
   opt = {
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
-    "batch_size": 1000000,
     "num_dims": 100,
-    "hyper_threads": 100,
-    "epochs": 10,
-    "lr": 0.001,
     "io": {
       "lower": False
     },
