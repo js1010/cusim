@@ -52,15 +52,15 @@ void IoUtils::ParseLineImpl(std::string line, std::vector<std::string>& ret) {
 }
 
 int64_t IoUtils::LoadStreamFile(std::string filepath) {
-  INFO("read gensim file to generate vocabulary: {}", filepath);
-  if (stream_fin_.is_open()) stream_fin_.close();
-  stream_fin_.open(filepath.c_str());
+  INFO("read stream file to generate vocabulary: {}", filepath);
+  if (fin_.is_open()) fin_.close();
+  fin_.open(filepath.c_str());
   int64_t count = 0;
   std::string line;
-  while (getline(stream_fin_, line))
+  while (getline(fin_, line))
     count++;
-  stream_fin_.close();
-  stream_fin_.open(filepath.c_str());
+  fin_.close();
+  fin_.open(filepath.c_str());
   num_lines_ = count;
   remain_lines_ = num_lines_;
   INFO("number of lines: {}", num_lines_);
@@ -84,7 +84,7 @@ std::pair<int, int> IoUtils::TokenizeStream(int num_lines, int num_threads) {
       // get line thread-safely
       {
         std::unique_lock<std::mutex> lock(global_lock_);
-        getline(stream_fin_, line);
+        getline(fin_, line);
       }
 
       // seems to be bottle-neck
@@ -131,7 +131,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
       // get line thread-safely
       {
         std::unique_lock<std::mutex> lock(global_lock_);
-        getline(stream_fin_, line);
+        getline(fin_, line);
       }
 
       // seems to be bottle-neck
@@ -151,7 +151,7 @@ std::pair<int, int> IoUtils::ReadStreamForVocab(int num_lines, int num_threads) 
       }
     }
   }
-  if (not remain_lines_) stream_fin_.close();
+  if (not remain_lines_) fin_.close();
   return {read_lines, word_count_.size()};
 }
 
@@ -178,6 +178,43 @@ void IoUtils::GetWordVocab(int min_count, std::string keys_path, std::string cou
     fout2.write(line.c_str(), line.size());
   }
   fout1.close(); fout2.close();
+}
+
+std::tuple<int64_t, int, int64_t> IoUtils::ReadBagOfWordsHeader(std::string filename) {
+  INFO("read bag of words file: {} (format reference: https://archive.ics.uci.edu/ml/datasets/bag+of+words)",
+      filepath);
+  if (fin_.is_open()) fin_.close();
+  fin_.open(filepath.c_str());
+  std::string line;
+  std::stringstream sstr;
+  int64_t num_docs, nnz;
+  int num_words;
+  getline(fin_, line);
+  sstr << line; sstr >> num_docs; sstr.clear();
+  getline(fin_, line);
+  num_words = std::stoi(line);
+  getline(fin_, line);
+  sstr << line; sstr >> nnz; sstr.clear();
+  return {num_docs, num_words, nnz};
+}
+
+void IoUtils::ReadBagOfWordsContent(int64_t* rows, int* cols, float* counts, const int num_lines) {
+  if (not fin_.is_open()) throw std::runtime_error("file is not open");
+  std::string line;
+  std::stringstream sstr;
+  int64_t row;
+  int col;
+  float count;
+  for (int i = 0; i < num_lines; ++i) {
+    getline(fin_, line);
+    std::vector<string> line_vec = ParseLine(line);
+    sstr << line_vec[0];
+    sstr >> row;
+    col = std::stoi(line_vec[1]);
+    count = std::stof(line_vec[2]);
+    rows[i] = row; cols[i] = col; counts[i] = count;
+  }
+  if (fin_.eof()) fin_.close();
 }
 
 }  // namespace cusim

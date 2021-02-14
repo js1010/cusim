@@ -14,6 +14,7 @@ namespace py = pybind11;
 
 typedef py::array_t<float, py::array::c_style | py::array::forcecast> float_array;
 typedef py::array_t<int, py::array::c_style | py::array::forcecast> int_array;
+typedef py::array_t<int64_t, py::array::c_style | py::array::forcecast> int64_array;
 
 class IoUtilsBind {
  public:
@@ -46,6 +47,26 @@ class IoUtilsBind {
     obj_.GetToken(_rows.mutable_data(0), _cols.mutable_data(0), _indptr.mutable_data(0));
   }
 
+  std::tuple<int64_t, int, int64_t> ReadBagOfWordsHeader(std::string filename) {
+    return obj_.ReadBagOfWords(filename);
+  }
+
+  void ReadBagOfWordsContent(py::object& rows, py::object& cols,
+      py::object counts) {
+    int64_array _rows(rows);
+    int_array _cols(cols);
+    float_array _counts(counts);
+    auto rows_buffer = _rows.request();
+    auto cols_buffer = _cols.request();
+    auto counts_buffer = _counts.request();
+    int num_lines = rows_buffer.shape[0];
+    if (cols_buffer.shape[0] != num_lines or counts_buffer.shape[0]) {
+      throw std::runtime_error("invalid shape");
+    }
+    obj_.ReadBagOfWordsContent(_rows.mutable_data(0),
+        _col.mutable_data(0), _counts.mutable_data(0), num_lines);
+  }
+
  private:
   cusim::IoUtils obj_;
 };
@@ -65,6 +86,10 @@ PYBIND11_PLUGIN(ioutils_bind) {
       py::arg("min_count"), py::arg("keys_path"), py::arg("count_path"))
   .def("get_token", &IoUtilsBind::GetToken,
       py::arg("indices"), py::arg("indptr"), py::arg("offset"))
+  .def("read_bag_of_words_header", &IoUtilsBind::ReadBagOfWordsHeader,
+      py::arg("filename"))
+  .def("read_bag_of_words_content", &IoUtilsBind::ReadBagOfWordsContent,
+      py::arg("rows"), py::arg("cols"), py::arg("counts"))
   .def("__repr__",
   [](const IoUtilsBind &a) {
     return "<IoUtilsBind>";

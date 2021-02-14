@@ -27,7 +27,7 @@ LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
 DATASET = "quora-duplicate-questions"
 DATA_PATH = f"./res/{DATASET}.stream.txt"
-PROCESSED_DATA_DIR = f"./res/{DATASET}-converted"
+PROCESSED_DATA_DIR = "./res/{DATASET}-processed"
 MIN_COUNT = 5
 CUSIM_MODEL = "./res/cusim.w2v.model"
 GENSIM_MODEL = "./res/gensim.w2v.model"
@@ -96,7 +96,7 @@ def run_gensim():
   download()
   start = time.time()
   model = gensim.models.Word2Vec(corpus_file=DATA_PATH, min_alpha=0.001,
-                                 min_count=5, sg=False, hs=True, workers=8,
+                                 min_count=5, sg=False, hs=True, workers=4,
                                  alpha=0.001, negative=10, iter=10,
                                  cbow_mean=False)
   LOGGER.info("elapsed for gensim w2v training: %.4e sec", time.time() - start)
