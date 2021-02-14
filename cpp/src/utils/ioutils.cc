@@ -205,15 +205,15 @@ void IoUtils::ReadBagOfWordsContent(int64_t* rows, int* cols, float* counts, con
   int64_t row;
   int col;
   float count;
+  std::vector<std::string> line_vec;
   for (int i = 0; i < num_lines; ++i) {
     getline(fin_, line);
-    std::vector<std::string> line_vec;
     ParseLine(line, line_vec);
-    sstr << line_vec[0];
-    sstr >> row;
+    sstr << line_vec[0]; sstr >> row; sstr.clear();
     col = std::stoi(line_vec[1]);
     count = std::stof(line_vec[2]);
-    rows[i] = row; cols[i] = col; counts[i] = count;
+    rows[i] = row - 1; cols[i] = col - 1; counts[i] = count;
+    line_vec.clear();
   }
   if (fin_.eof()) fin_.close();
 }

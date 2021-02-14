@@ -2,3 +2,4 @@ fire
 gensim
 nltk
 tqdm
+wget

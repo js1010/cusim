@@ -60,7 +60,7 @@ class IoUtilsBind {
     auto cols_buffer = _cols.request();
     auto counts_buffer = _counts.request();
     int num_lines = rows_buffer.shape[0];
-    if (cols_buffer.shape[0] != num_lines or counts_buffer.shape[0]) {
+    if (cols_buffer.shape[0] != num_lines or counts_buffer.shape[0] != num_lines) {
       throw std::runtime_error("invalid shape");
     }
     obj_.ReadBagOfWordsContent(_rows.mutable_data(0),
