@@ -61,7 +61,7 @@ class CuLDABind {
     int_array _cols(cols);
     int_array _indptr(indptr);
     bool_array _vali(vali);
-    float_array _counts(counts)
+    float_array _counts(counts);
     auto cols_buffer = _cols.request();
     auto indptr_buffer = _indptr.request();
     auto vali_buffer = _vali.request();
