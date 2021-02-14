@@ -15,7 +15,10 @@ import subprocess
 import tqdm
 import fire
 import wget
+import h5py
+import numpy as np
 
+# import gensim
 from gensim.models.ldamulticore import LdaMulticore
 
 from cusim import aux, CuLDA
@@ -77,7 +80,24 @@ def run_cusim():
   lda.train_model()
   LOGGER.info("elapsed for training LDA using cusim: %.4e sec",
               time.time() - start)
-  lda.save_h5_model(pjoin(DIR_PATH, "cusim.lda.model.h5"))
+  h5_model_path = pjoin(DIR_PATH, "cusim.lda.model.h5")
+  lda.save_h5_model(h5_model_path)
+  show_topics(h5_model_path)
+
+def show_topics(h5_model_path, topk=10):
+  h5f = h5py.File(h5_model_path, "r")
+  beta = h5f["beta"][:, :].T
+  keys = h5f["keys"][:]
+  for idx in range(beta.shape[0]):
+    print("=" * 50)
+    print(f"topic {idx + 1}")
+    print("-" * 50)
+    _beta = beta[idx, :]
+    indices = np.argsort(-_beta)[:topk]
+    for rank, wordid in enumerate(indices):
+      word = keys[wordid].decode("utf8")
+      prob = _beta[wordid]
+      print(f"rank {rank + 1}. {word}: {prob}")
 
 
 def build_gensim_corpus():
@@ -126,6 +146,14 @@ def run_gensim():
   LOGGER.info("elapsed for training lda using gensim: %.4e sec",
               time.time() - start)
   lda.save(pjoin(DIR_PATH, "gensim.lda.model"))
+
+def get_gensim_perplexity(model_path=None):
+  model_path = model_path or pjoin(DIR_PATH, "gensim.lda.model")
+  LOGGER.info("load gensim lda model from %s", model_path)
+  lda = LdaMulticore.load(model_path)
+  docs = build_gensim_corpus()
+  perp = lda.log_perplexity(docs[:100])
+  print(perp)
 
 
 if __name__ == "__main__":
