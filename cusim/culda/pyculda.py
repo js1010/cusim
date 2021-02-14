@@ -18,13 +18,17 @@ from scipy.special import polygamma as pg
 from cusim import aux, IoUtils
 from cusim.culda.culda_bind import CuLDABind
 from cusim.config_pb2 import CuLDAConfigProto
+from cusim.constants import EPS, WARP_SIZE
 
-EPS = 1e-10
 
 class CuLDA:
   def __init__(self, opt=None):
     self.opt = aux.get_opt_as_proto(opt or {}, CuLDAConfigProto)
     self.logger = aux.get_logger("culda", level=self.opt.py_log_level)
+
+    assert self.opt.block_dim <= WARP_SIZE ** 2 and \
+      self.opt.block_dim % WARP_SIZE == 0, \
+      f"invalid block dim ({self.opt.block_dim}, warp size: {WARP_SIZE})"
 
     tmp = tempfile.NamedTemporaryFile(mode='w', delete=False)
     opt_content = json.dumps(aux.proto_to_dict(self.opt), indent=2)

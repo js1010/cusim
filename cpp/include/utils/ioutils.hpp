@@ -33,7 +33,7 @@ class IoUtils {
   int LoadStreamFile(std::string filepath);
   std::pair<int, int> ReadStreamForVocab(int num_lines, int num_threads);
   std::pair<int, int> TokenizeStream(int num_lines, int num_threads);
-  void GetWordVocab(int min_count, std::string keys_path);
+  void GetWordVocab(int min_count, std::string keys_path, std::string count_path);
   void GetToken(int* rows, int* cols, int* indptr);
  private:
   void ParseLine(std::string line, std::vector<std::string>& line_vec);
@@ -45,6 +45,7 @@ class IoUtils {
   std::ifstream stream_fin_;
   json11::Json opt_;
   std::shared_ptr<spdlog::logger> logger_;
+  std::unique_ptr<CuSimLogger> logger_container_;
   std::unordered_map<std::string, int> word_idmap_, word_count_;
   std::vector<std::string> word_list_;
   int num_lines_, remain_lines_;

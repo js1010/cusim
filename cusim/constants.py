@@ -3,6 +3,8 @@
 #
 # This source code is licensed under the Apache 2.0 license found in the
 # LICENSE file in the root directory of this source tree.
-from cusim.ioutils import IoUtils
-from cusim.culda import CuLDA
-from cusim.cuw2v import CuW2V
+
+# pylint: disable=no-name-in-module,too-few-public-methods,no-member
+
+EPS = 1e-10
+WARP_SIZE = 32
