@@ -28,24 +28,27 @@ float Digamma(float x) {
 __global__ void EstepKernel(
   const int* cols, const int* indptr, 
   const bool* vali, const float* counts,
-  const int num_cols, const int num_indptr, 
+  const bool init_gamma, const int num_cols, const int num_indptr, 
   const int num_topics, const int num_iters,
   const float* alpha, const float* beta,
-  float* grad_alpha, float* new_beta, 
+  float* gamma, float* grad_alpha, float* new_beta, 
   float* train_losses, float* vali_losses, int* locks) {
   
   // storage for block
   extern __shared__ float shared_memory[];
-  float* _gamma = &shared_memory[0];
-  float* _new_gamma = &shared_memory[num_topics];
-  float* _phi = &shared_memory[2 * num_topics];
+  // float* _gamma = &shared_memory[0];
+  float* _new_gamma = &shared_memory[0];
+  float* _phi = &shared_memory[num_topics];
   float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
     int beg = indptr[i], end = indptr[i + 1];
-    // initialize gamma
-    for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
-      _gamma[j] = alpha[j] + (end - beg) / num_topics;
+    float* _gamma = gamma + num_topics * i;
+    if (init_gamma) {
+      for (int j = threadIdx.x; j < num_topics; j += blockDim.x) {
+        _gamma[j] = alpha[j] + (end - beg) / num_topics;
+      }
+    }
     __syncthreads();
 
     // iterate E step

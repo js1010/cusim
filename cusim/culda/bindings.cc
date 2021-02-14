@@ -57,31 +57,36 @@ class CuLDABind {
 
   std::pair<float, float> FeedData(py::object& cols,
       py::object& indptr, py::object& vali, py::object& counts,
+      py::object& gamma, const bool init_gamma,
       const int num_iters) {
     int_array _cols(cols);
     int_array _indptr(indptr);
     bool_array _vali(vali);
     float_array _counts(counts);
+    float_array _gamma(gamma);
     auto cols_buffer = _cols.request();
     auto indptr_buffer = _indptr.request();
     auto vali_buffer = _vali.request();
     auto counts_buffer = _counts.request();
+    auto gamma_buffer = _gamma.request();
     if (cols_buffer.ndim != 1 or
         indptr_buffer.ndim != 1 or
         vali_buffer.ndim != 1 or
-        counts_buffer.ndim != 1) {
+        counts_buffer.ndim != 1 or
+        gamma_buffer.ndim != 2) {
       throw std::runtime_error("invalid ndim");
     }
     int num_cols = cols_buffer.shape[0];
+    int num_indptr = indptr_buffer.shape[0] - 1;
 
     if (vali_buffer.shape[0] != num_cols or
-        counts_buffer.shape[0] != num_cols) {
+        counts_buffer.shape[0] != num_cols or
+        gamma_buffer.shape[0] != num_indptr) {
       throw std::runtime_error("invalid length");
     }
-    int num_indptr = indptr_buffer.shape[0] - 1;
     return obj_.FeedData(_cols.data(0), _indptr.data(0),
-        _vali.data(0), _counts.data(0),
-        num_cols, num_indptr, num_iters);
+        _vali.data(0), _counts.data(0), _gamma.mutable_data(0),
+        init_gamma, num_cols, num_indptr, num_iters);
   }
 
   void Pull() {
@@ -111,7 +116,8 @@ PYBIND11_PLUGIN(culda_bind) {
       py::arg("grad_alpha"), py::arg("new_beta"))
   .def("feed_data", &CuLDABind::FeedData,
       py::arg("cols"), py::arg("indptr"), py::arg("vali"),
-      py::arg("counts"), py::arg("num_iters"))
+      py::arg("counts"), py::arg("gamma"),
+      py::arg("init_gamma"), py::arg("num_iters"))
   .def("pull", &CuLDABind::Pull)
   .def("push", &CuLDABind::Push)
   .def("get_block_cnt", &CuLDABind::GetBlockCnt)

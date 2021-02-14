@@ -65,8 +65,8 @@ void CuLDA::LoadModel(float* alpha, float* beta,
 
 std::pair<float, float> CuLDA::FeedData(
     const int* cols, const int* indptr, 
-    const bool* vali, const float* counts,
-    const int num_cols, const int num_indptr, 
+    const bool* vali, const float* counts, float* gamma,
+    const bool init_gamma, const int num_cols, const int num_indptr, 
     const int num_iters) {
   
   // copy feed data to GPU memory
@@ -74,25 +74,28 @@ std::pair<float, float> CuLDA::FeedData(
   thrust::device_vector<int> dev_indptr(num_indptr + 1);
   thrust::device_vector<bool> dev_vali(num_cols);
   thrust::device_vector<float> dev_counts(num_cols);
+  thrust::device_vector<float> dev_gamma(num_indptr * num_topics_);
   thrust::device_vector<float> dev_train_losses(block_cnt_, 0.0f);
   thrust::device_vector<float> dev_vali_losses(block_cnt_, 0.0f);
   thrust::copy(cols, cols + num_cols, dev_cols.begin());
   thrust::copy(indptr, indptr + num_indptr + 1, dev_indptr.begin());
   thrust::copy(vali, vali + num_cols, dev_vali.begin());
   thrust::copy(counts, counts + num_cols, dev_counts.begin());
+  thrust::copy(gamma, gamma + num_indptr * num_topics_, dev_gamma.begin());
   CHECK_CUDA(cudaDeviceSynchronize());
   DEBUG0("copy feed data to GPU memory");
 
   // run E step in GPU
   EstepKernel<<<block_cnt_, block_dim_, 
-    3 * num_topics_ * sizeof(float)>>>(
+    2 * num_topics_ * sizeof(float)>>>(
     thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
     thrust::raw_pointer_cast(dev_vali.data()),
     thrust::raw_pointer_cast(dev_counts.data()),
-    num_cols, num_indptr, num_topics_, num_iters,
+    init_gamma, num_cols, num_indptr, num_topics_, num_iters,
     thrust::raw_pointer_cast(dev_alpha_.data()),
     thrust::raw_pointer_cast(dev_beta_.data()),
+    thrust::raw_pointer_cast(dev_gamma.data()),
     thrust::raw_pointer_cast(dev_grad_alpha_.data()),
     thrust::raw_pointer_cast(dev_new_beta_.data()),
     thrust::raw_pointer_cast(dev_train_losses.data()),
@@ -105,6 +108,7 @@ std::pair<float, float> CuLDA::FeedData(
   std::vector<float> train_losses(block_cnt_), vali_losses(block_cnt_);
   thrust::copy(dev_train_losses.begin(), dev_train_losses.end(), train_losses.begin());
   thrust::copy(dev_vali_losses.begin(), dev_vali_losses.end(), vali_losses.begin());
+  thrust::copy(dev_gamma.begin(), dev_gamma.end(), gamma);
   CHECK_CUDA(cudaDeviceSynchronize());
   DEBUG0("pull loss values");
 

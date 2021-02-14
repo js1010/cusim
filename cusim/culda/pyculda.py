@@ -85,6 +85,17 @@ class CuLDA:
     self.logger.info("grad alpha %s, new beta %s initialized",
                      self.grad_alpha.shape, self.new_beta.shape)
 
+    # set h5 file path to backup gamma
+    if not self.opt.gamma_path:
+      data_dir = tempfile.TemporaryDirectory().name
+      self.opt.gamma_path = pjoin(data_dir, "gamma.h5")
+    self.logger.info("backup gamma to %s", self.opt.gamma_path)
+    os.makedirs(os.path.dirname(self.opt.gamma_path), exist_ok=True)
+    h5f = h5py.File(self.opt.gamma_path, "w")
+    h5f.create_dataset("gamma", shape=(self.num_docs, self.opt.num_topics),
+                       dtype=np.float32)
+    h5f.close()
+
     # push it to gpu
     self.obj.load_model(self.alpha, self.beta, self.grad_alpha, self.new_beta)
 
@@ -92,13 +103,15 @@ class CuLDA:
     self.preprocess_data()
     self.init_model()
     h5f = h5py.File(self.opt.processed_data_path, "r")
+    gamma_h5f = h5py.File(self.opt.gamma_path, "r+")
     for epoch in range(1, self.opt.epochs + 1):
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
-      self._train_e_step(h5f)
+      self._train_e_step(h5f, gamma_h5f["gamma"], epoch)
       self._train_m_step()
     h5f.close()
+    gamma_h5f.close()
 
-  def _train_e_step(self, h5f):
+  def _train_e_step(self, h5f, gamma_h5f, epoch):
     offset, size = 0, h5f["cols"].shape[0]
     pbar = aux.Progbar(size, stateful_metrics=["train_loss", "vali_loss"])
     train_loss_nume, train_loss_deno = 0, 0
@@ -115,13 +128,15 @@ class CuLDA:
       cols = h5f["cols"][beg:end]
       counts = h5f["counts"][beg:end]
       vali = (h5f["vali"][beg:end] < self.opt.vali_p).astype(np.bool)
-      offset = next_offset
+      gamma = gamma_h5f[offset:next_offset, :]
 
       # call cuda kernel
       train_loss, vali_loss = \
         self.obj.feed_data(cols, indptr.astype(np.int32),
-                           vali, counts, self.opt.num_iters_in_e_step)
+                           vali, counts, gamma, epoch == 1,
+                           self.opt.num_iters_in_e_step)
 
+      gamma_h5f[offset:next_offset, :] = gamma
       # accumulate loss
       train_loss_nume -= train_loss
       vali_loss_nume -= vali_loss
@@ -133,6 +148,8 @@ class CuLDA:
       # update progress bar
       pbar.update(end, values=[("train_loss", train_loss),
                                ("vali_loss", vali_loss)])
+      offset = next_offset
+
       if end == size:
         break
 

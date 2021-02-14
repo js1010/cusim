@@ -67,6 +67,7 @@ class CuLDA {
   std::pair<float, float> FeedData(
       const int* indices, const int* indptr,
       const bool* vali, const float* counts,
+      float* gamma, const bool init_gamma,
       const int num_indices, const int num_indptr,
       const int num_iters);
   void Pull();

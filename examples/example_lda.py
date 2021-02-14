@@ -59,16 +59,16 @@ def download():
 
 def run_cusim():
   download()
-  data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
+  # data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
   keys_path = pjoin(DIR_PATH, f"vocab.{DATASET}.txt")
   processed_data_path = pjoin(DIR_PATH, f"docword.{DATASET}.h5")
   opt = {
-    "data_path": data_path,
-    # "skip_preprocess": True,
+    # "data_path": data_path,
+    "skip_preprocess": True,
     "processed_data_path": processed_data_path,
     "keys_path": keys_path,
     "num_topics": 50,
-    "num_iters_in_e_step": 20,
+    "num_iters_in_e_step": 10,
     # "skip_preprocess":True,
   }
   start = time.time()
@@ -119,7 +119,9 @@ def run_gensim():
       id2word[idx] = line.strip()
 
   start = time.time()
-  lda = LdaMulticore(docs, num_topics=5, workers=8, id2word=id2word)
+  # 3 = real cores - 1
+  lda = LdaMulticore(docs, num_topics=50, workers=1,
+                     id2word=id2word, iterations=10)
   LOGGER.info("elapsed for training lda using gensim: %.4e sec",
               time.time() - start)
   lda.save(pjoin(DIR_PATH, "gensim.lda.model"))
