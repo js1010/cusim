@@ -91,7 +91,7 @@ class CuLDA:
   def train_model(self):
     self.preprocess_data()
     self.init_model()
-    h5f = h5py.File(pjoin(self.opt.processed_data_dir, "token.h5"), "r")
+    h5f = h5py.File(self.opt.processed_data_path, "r")
     for epoch in range(1, self.opt.epochs + 1):
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
       self._train_e_step(h5f)

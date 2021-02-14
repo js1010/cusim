@@ -17,10 +17,11 @@ import wget
 
 # import gensim
 
-from cusim import aux, IoUtils
+from cusim import aux, CuLDA
 
 LOGGER = aux.get_logger()
-DATASET = "nips"
+# DATASET = "nips"
+DATASET = "nytimes"
 DIR_PATH = "./res"
 BASE_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/" \
            "bag-of-words/"
@@ -28,6 +29,11 @@ BASE_URL = "https://archive.ics.uci.edu/ml/machine-learning-databases/" \
 def download():
   if not os.path.exists(DIR_PATH):
     os.makedirs(DIR_PATH, exist_ok=True)
+
+  if os.path.exists(pjoin(DIR_PATH, f"docword.{DATASET}.txt")):
+    LOGGER.info("path %s already exists",
+                pjoin(DIR_PATH, f"docword.{DATASET}.txt"))
+    return
 
   # download docword
   filename = f"docword.{DATASET}.txt.gz"
@@ -43,36 +49,26 @@ def download():
   subprocess.call(cmd, shell=True)
   os.remove(pjoin(DIR_PATH, filename))
 
-def run_io():
-  iou = IoUtils()
-  data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
-  h5_path = pjoin(DIR_PATH, f"docword.{DATASET}.h5")
-  iou.convert_bow_to_h5(data_path, h5_path)
+  # download vocab
+  filename = f"vocab.{DATASET}.txt"
+  out_path = pjoin(DIR_PATH, filename)
+  LOGGER.info("download %s to %s", BASE_URL + filename, out_path)
+  wget.download(BASE_URL + filename, out=out_path)
+  print()
 
-# def run_lda():
-#   download()
-#   opt = {
-#     "data_path": DATA_PATH,
-#     "processed_data_dir": PROCESSED_DATA_DIR,
-#     # "skip_preprocess":True,
-#   }
-#   lda = CuLDA(opt)
-#   lda.train_model()
-#   lda.save_model(LDA_PATH)
-#   h5f = h5py.File(LDA_PATH, "r")
-#   beta = h5f["beta"][:]
-#   word_list = h5f["keys"][:]
-#   num_topics = h5f["alpha"].shape[0]
-#   for i in range(num_topics):
-#     print("=" * 50)
-#     print(f"topic {i + 1}")
-#     words = np.argsort(-beta.T[i])[:10]
-#     print("-" * 50)
-#     for j in range(TOPK):
-#       word = word_list[words[j]].decode("utf8")
-#       prob = beta[words[j], i]
-#       print(f"rank {j + 1}. word: {word}, prob: {prob}")
-#   h5f.close()
+def run_cusim():
+  download()
+  data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
+  keys_path = pjoin(DIR_PATH, f"vocab.{DATASET}.txt")
+  processed_data_path = pjoin(DIR_PATH, f"docword.{DATASET}.h5")
+  opt = {
+    "data_path": data_path,
+    "processed_data_path": processed_data_path,
+    "keys_path": keys_path
+    # "skip_preprocess":True,
+  }
+  lda = CuLDA(opt)
+  lda.train_model()
 
 
 if __name__ == "__main__":
