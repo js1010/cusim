@@ -73,7 +73,7 @@ void CuW2V::BuildRandomTable(const double* word_count, const int num_words, cons
   for (int i = 0; i < num_words; ++i) {
     int weight = std::max(1, static_cast<int>(word_count[i] * static_cast<double>(table_size)));
     for (int j = 0; j < weight; ++j)
-      host_random_table.push_back(j);
+      host_random_table.push_back(i);
   }
   
   random_size_ = host_random_table.size();

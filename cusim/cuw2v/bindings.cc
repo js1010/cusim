@@ -75,10 +75,6 @@ class CuW2VBind {
     obj_.Pull();
   }
 
-  int GetBlockCnt() {
-    return obj_.GetBlockCnt();
-  }
-
  private:
   cusim::CuW2V obj_;
 };

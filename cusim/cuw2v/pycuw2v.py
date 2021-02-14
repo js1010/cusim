@@ -76,7 +76,7 @@ class CuW2V:
     # normalize word count
     word_count = np.power(self.word_count, self.opt.count_power,
                           dtype=np.float64)
-    word_count /= np.sum(self.word_count)
+    word_count /= np.sum(word_count)
     if self.opt.neg:
       self.obj.build_random_table(word_count, self.opt.random_size)
     else:

@@ -95,7 +95,7 @@ def run_cusim_w2v():
     "batch_size": 1000000,
     "num_dims": 100,
     "hyper_threads": 100,
-    "epochs": 20,
+    "epochs": 10,
     "lr": 0.001,
     "io": {
       "lower": False
