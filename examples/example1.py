@@ -100,8 +100,8 @@ def run_cusim_w2v():
     "io": {
       "lower": False
     },
-    "neg": 0,
-    "skip_gram": False,
+    "neg": 10,
+    "skip_gram": True,
     # "pretrained_model": {
     #   "filename": "./res/gensim.w2v.model",
     # }

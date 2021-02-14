@@ -67,11 +67,11 @@ bool CuW2V::Init(std::string opt_path) {
   return true;
 }
 
-void CuW2V::BuildRandomTable(const float* word_count, const int num_words, const int table_size) {
+void CuW2V::BuildRandomTable(const double* word_count, const int num_words, const int table_size) {
   num_words_ = num_words;
   std::vector<int> host_random_table;
   for (int i = 0; i < num_words; ++i) {
-    int weight = std::max(1, static_cast<int>(word_count[i] * table_size));
+    int weight = std::max(1, static_cast<int>(word_count[i] * static_cast<double>(table_size)));
     for (int j = 0; j < weight; ++j)
       host_random_table.push_back(j);
   }
@@ -164,10 +164,6 @@ void CuW2V::LoadModel(float* emb_in, float* emb_out) {
   emb_in_ = emb_in; emb_out_ = emb_out;
   
   CHECK_CUDA(cudaDeviceSynchronize());
-}
-
-int CuW2V::GetBlockCnt() {
-  return block_cnt_;
 }
 
 

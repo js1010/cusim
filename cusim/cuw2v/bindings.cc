@@ -13,6 +13,7 @@
 namespace py = pybind11;
 
 typedef py::array_t<float, py::array::c_style | py::array::forcecast> float_array;
+typedef py::array_t<double, py::array::c_style | py::array::forcecast> double_array;
 typedef py::array_t<int, py::array::c_style | py::array::forcecast> int_array;
 
 class CuW2VBind {
@@ -38,7 +39,7 @@ class CuW2VBind {
   }
 
   void BuildRandomTable(py::object& word_count, int table_size) {
-    float_array _word_count(word_count);
+    double_array _word_count(word_count);
     auto wc_buffer = _word_count.request();
     if (wc_buffer.ndim != 1) {
       throw std::runtime_error("invalid word count");
@@ -97,7 +98,6 @@ PYBIND11_PLUGIN(cuw2v_bind) {
       py::arg("word_count"), py::arg("table_size"))
   .def("build_huffman_tree", &CuW2VBind::BuildHuffmanTree,
       py::arg("word_count"))
-  .def("get_block_cnt", &CuW2VBind::GetBlockCnt)
   .def("__repr__",
   [](const CuW2VBind &a) {
     return "<CuW2VBind>";

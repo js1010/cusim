@@ -41,8 +41,7 @@ class CuW2V {
   bool Init(std::string opt_path);
   void LoadModel(float* emb_in, float* emb_out);
   void BuildHuffmanTree(const float* word_count, const int num_words);
-  void BuildRandomTable(const float* word_count, const int num_words, const int table_size);
-  int GetBlockCnt();
+  void BuildRandomTable(const double* word_count, const int num_words, const int table_size);
   std::pair<float, float> FeedData(const int* cols, const int* indptr,
       const int num_cols, const int num_indptr);
   void Pull();
