@@ -20,6 +20,7 @@ message CuLDAConfigProto {
   required string keys_path = 16;
   optional bool skip_preprocess = 8;
   optional string gamma_path = 17;
+  optional bool reuse_gamma = 18;
 
   optional int32 py_log_level = 1 [default = 2];
   optional int32 c_log_level = 2 [default = 2];

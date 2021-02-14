@@ -133,7 +133,8 @@ class CuLDA:
       # call cuda kernel
       train_loss, vali_loss = \
         self.obj.feed_data(cols, indptr.astype(np.int32),
-                           vali, counts, gamma, epoch == 1,
+                           vali, counts, gamma,
+                           epoch == 1 or self.opt.reuse_gamma,
                            self.opt.num_iters_in_e_step)
 
       gamma_h5f[offset:next_offset, :] = gamma

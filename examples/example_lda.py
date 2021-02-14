@@ -69,6 +69,7 @@ def run_cusim():
     "keys_path": keys_path,
     "num_topics": 50,
     "num_iters_in_e_step": 10,
+    "reuse_gamma": True,
     # "skip_preprocess":True,
   }
   start = time.time()
