@@ -4,6 +4,13 @@ This project is to speed up various ML models (e.g. topic modeling, word embeddi
 
 ### How to install
 
+- install from pypi
+
+```shell
+pip install cusim
+```
+
+
 - install from source
 
 ```shell
@@ -19,8 +26,6 @@ python -m grpc_tools.protoc --python_out cusim/ --proto_path cusim/proto/ config
 # install
 python setup.py install
 ```
-
-- pip installation will be available soon
 
 ### How to use
 
