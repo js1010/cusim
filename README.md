@@ -72,7 +72,7 @@ python setup.py install
 
 | attr                |   gensim (8 vpus) |   cusim |
 |:--------------------|------------------:|--------:|
-| training time (sec) |           447.376 | 76.6972 |
+| training time (sec) |           447.376 | **76.6972** |
 
 ### Future tasks
 
