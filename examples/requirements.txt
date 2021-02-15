@@ -1,5 +1,7 @@
 fire
-gensim
+gensim==3.8.3
 nltk
 tqdm
 wget
+pandas
+tabulate

@@ -72,7 +72,7 @@ def run_cusim():
     "num_topics": 50,
     "num_iters_in_e_step": 10,
     "reuse_gamma": True,
-    "skip_preprocess": os.path.exists(processed_data_path),
+    # "skip_preprocess": os.path.exists(processed_data_path),
   }
   start = time.time()
   lda = CuLDA(opt)

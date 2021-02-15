@@ -12,6 +12,7 @@ import subprocess
 
 import tqdm
 import fire
+import pandas as pd
 
 import gensim
 from gensim import downloader as api
@@ -28,9 +29,18 @@ DOWNLOAD_PATH = "./res"
 DATASET = "quora-duplicate-questions"
 DATA_PATH = f"./res/{DATASET}.stream.txt"
 PROCESSED_DATA_DIR = "./res/{DATASET}-processed"
-MIN_COUNT = 5
 CUSIM_MODEL = "./res/cusim.w2v.model"
 GENSIM_MODEL = "./res/gensim.w2v.model"
+
+
+# common hyperparameters
+MIN_COUNT = 5
+LEARNING_RATE = 0.001
+NEG_SIZE = 10
+NUM_DIMS = 100
+CBOW_MEAN = False
+EPOCHS = 10
+
 
 def download():
   if os.path.exists(DATA_PATH):
@@ -68,37 +78,45 @@ def preprocess_line(line, tokenizer, lemmatizer):
   line = [lemmatizer.lemmatize(token) for token in line]
   return " ".join(line)
 
-def run_cusim():
+def run_cusim(skip_gram=False, hierarchical_softmax=False):
   download()
   opt = {
     "data_path": DATA_PATH,
     "processed_data_dir": PROCESSED_DATA_DIR,
-    "num_dims": 100,
+    # "skip_preprocess": os.path.exists(PROCESSED_DATA_DIR),
+    "num_dims": NUM_DIMS,
+    "epochs": EPOCHS,
+    "word_min_count": MIN_COUNT,
+    "lr": 0.001,
     "io": {
       "lower": False
     },
-    "neg": 0,
-    "skip_gram": False,
-    "cbow_mean": False,
+    "neg": 0 if hierarchical_softmax else NEG_SIZE,
+    "skip_gram": skip_gram,
+    "cbow_mean": CBOW_MEAN,
   }
   start = time.time()
   w2v = CuW2V(opt)
   w2v.train_model()
-  LOGGER.info("elapsed for cusim w2v training: %.4e sec", time.time() - start)
+  elapsed = time.time() - start
+  LOGGER.info("elapsed for cusim w2v training: %.4e sec", elapsed)
   w2v.save_word2vec_format(CUSIM_MODEL, binary=False)
-  evaluate_w2v_model(CUSIM_MODEL)
+  return elapsed, evaluate_w2v_model(CUSIM_MODEL)
 
-def run_gensim():
+def run_gensim(skip_gram=False, hierarchical_softmax=False, workers=8):
   download()
   start = time.time()
-  model = gensim.models.Word2Vec(corpus_file=DATA_PATH, min_alpha=0.001,
-                                 min_count=5, sg=False, hs=True, workers=4,
-                                 alpha=0.001, negative=10, iter=10,
-                                 cbow_mean=False)
-  LOGGER.info("elapsed for gensim w2v training: %.4e sec", time.time() - start)
+  model = gensim.models.Word2Vec(corpus_file=DATA_PATH, workers=workers,
+                                 sg=skip_gram, hs=hierarchical_softmax,
+                                 min_alpha=LEARNING_RATE, min_count=MIN_COUNT,
+                                 alpha=LEARNING_RATE, negative=NEG_SIZE,
+                                 iter=EPOCHS, cbow_mean=CBOW_MEAN,
+                                 size=NUM_DIMS)
+  elapsed = time.time() - start
+  LOGGER.info("elapsed for gensim w2v training: %.4e sec", elapsed)
   model.wv.save_word2vec_format(GENSIM_MODEL, binary=False)
   LOGGER.info("gensim w2v model is saved to %s", GENSIM_MODEL)
-  evaluate_w2v_model(GENSIM_MODEL)
+  return elapsed, evaluate_w2v_model(GENSIM_MODEL)
 
 def evaluate_w2v_model(model=GENSIM_MODEL):
   LOGGER.info("load word2vec format model from %s", model)
@@ -106,8 +124,24 @@ def evaluate_w2v_model(model=GENSIM_MODEL):
   results = model.wv.evaluate_word_pairs(datapath("wordsim353.tsv"),
                                          case_insensitive=False)
   LOGGER.info("evaluation results: %s", results)
+  return results
 
-
+def run_experiments(sg0=False, hs0=False):
+  training_time = {"attr": "training_time"}
+  pearson = {"attr": "pearson"}
+  spearman = {"attr": "spearman"}
+  for i in [1, 2, 4, 8]:
+    elapsed, evals = run_gensim(sg0, hs0, i)
+    training_time[f"{i} workers"] = elapsed
+    pearson[f"{i} workers"] = evals[0][0]
+    spearman[f"{i} workers"] = evals[1][0]
+  elapsed, evals = run_cusim(sg0, hs0)
+  training_time["GPU"] = elapsed
+  pearson["GPU"] = evals[0][0]
+  spearman["GPU"] = evals[1][0]
+  df0 = pd.DataFrame([training_time, pearson, spearman])
+  df0.set_index("attr", inplace=True)
+  print(df0.to_markdown())
 
 
 if __name__ == "__main__":
