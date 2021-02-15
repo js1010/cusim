@@ -36,9 +36,11 @@ __global__ void EstepKernel(
   
   // storage for block
   extern __shared__ float shared_memory[];
-  // float* _gamma = &shared_memory[0];
   float* _new_gamma = &shared_memory[0];
   float* _phi = &shared_memory[num_topics];
+  float* _loss_vec = &shared_memory[num_topics * 2];
+  float* _vali_phi_sum = &shared_memory[num_topics * 3];
+
   float* _grad_alpha = grad_alpha + num_topics * blockIdx.x;
 
   for (int i = blockIdx.x; i < num_indptr; i += gridDim.x) {
@@ -50,6 +52,10 @@ __global__ void EstepKernel(
       }
     }
     __syncthreads();
+    
+    // initiate phi sum for validation data for computing vali loss 
+    for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
+      _vali_phi_sum[j] = 0.0f;
 
     // iterate E step
     for (int j = 0; j < num_iters; ++j) {
@@ -74,37 +80,51 @@ __global__ void EstepKernel(
 
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             _phi[l] /= phi_sum;
-            if (not _vali) _new_gamma[l] += _phi[l] * c;
+            
+            // update gamma for train data and phi_sum for computing loss
+            if (_vali) 
+              _vali_phi_sum[l] += _phi[l] * c;
+            else
+              _new_gamma[l] += _phi[l] * c;
+          
           }
           __syncthreads();
         }
         
         if (j + 1 == num_iters) {
-          // write access of w th vector of new_beta 
-          if (threadIdx.x == 0) {
-            while (atomicCAS(&locks[w], 0, 1)) {}
-          } 
+          // update beta for train data
+          if (not _vali) {
+            // write access of w th vector of new_beta 
+            if (threadIdx.x == 0) {
+              while (atomicCAS(&locks[w], 0, 1)) {}
+            } 
 
-          __syncthreads();
+            __syncthreads();
+            for (int l = threadIdx.x; l < num_topics; l += blockDim.x)
+              new_beta[w * num_topics + l] += _phi[l] * c;
+            __syncthreads();
+
+            // release lock
+            if (threadIdx.x == 0) locks[w] = 0;
+            __syncthreads();
+          }
+          
+          // comput loss and reset shared mem
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
-            if (j + 1 == num_iters) { 
-              if (not _vali) new_beta[w * num_topics + l] += _phi[l] * c;
-              _phi[l] *= beta[w * num_topics + l];
-            }
+            _loss_vec[l] = logf(fmaxf(beta[w * num_topics + l], EPS));
+            _loss_vec[l] -= logf(fmaxf(_phi[l], EPS));
+            _loss_vec[l] *= _phi[l];
+          }
+          __syncthreads();
+          float _loss = ReduceSum(_loss_vec, num_topics) * c;
+          if (threadIdx.x == 0) {
+            if (_vali) 
+              vali_losses[blockIdx.x] += _loss;
+            else
+              train_losses[blockIdx.x] += _loss;
           }
           __syncthreads();
 
-          // release lock
-          if (threadIdx.x == 0) locks[w] = 0;
-          __syncthreads();
-
-          float p = fmaxf(EPS, ReduceSum(_phi, num_topics));
-          if (threadIdx.x == 0) {
-            if (_vali)
-              vali_losses[blockIdx.x] += logf(p) * c;
-            else
-              train_losses[blockIdx.x] += logf(p) * c;
-          } 
         }
         __syncthreads();
       }
@@ -114,9 +134,21 @@ __global__ void EstepKernel(
         _gamma[k] = _new_gamma[k] + alpha[k];
       __syncthreads();
     }
+
+    // update gradient of alpha and loss from E[log(theta)]
     float gamma_sum = ReduceSum(_gamma, num_topics);
-    for (int j = threadIdx.x; j < num_topics; j += blockDim.x)
-      _grad_alpha[j] += (Digamma(_gamma[j]) - Digamma(gamma_sum));
+    for (int j = threadIdx.x; j < num_topics; j += blockDim.x) {
+      float Elogthetad = Digamma(_gamma[j]) - Digamma(gamma_sum);
+      _grad_alpha[j] += Elogthetad;
+      _new_gamma[j] *= Elogthetad;
+      _vali_phi_sum[j] *= Elogthetad;
+    }
+    float train_loss = ReduceSum(_new_gamma, num_topics);
+    float vali_loss = ReduceSum(_vali_phi_sum, num_topics);
+    if (threadIdx.x == 0) {
+      train_losses[blockIdx.x] += train_loss;
+      vali_losses[blockIdx.x] += vali_loss;
+    }
 
     __syncthreads();
   } 

@@ -87,7 +87,7 @@ std::pair<float, float> CuLDA::FeedData(
 
   // run E step in GPU
   EstepKernel<<<block_cnt_, block_dim_, 
-    2 * num_topics_ * sizeof(float)>>>(
+    4 * num_topics_ * sizeof(float)>>>(
     thrust::raw_pointer_cast(dev_cols.data()),
     thrust::raw_pointer_cast(dev_indptr.data()),
     thrust::raw_pointer_cast(dev_vali.data()),

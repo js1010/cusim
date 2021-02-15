@@ -62,18 +62,17 @@ def download():
 
 def run_cusim():
   download()
-  # data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
+  data_path = pjoin(DIR_PATH, f"docword.{DATASET}.txt")
   keys_path = pjoin(DIR_PATH, f"vocab.{DATASET}.txt")
   processed_data_path = pjoin(DIR_PATH, f"docword.{DATASET}.h5")
   opt = {
-    # "data_path": data_path,
-    "skip_preprocess": True,
+    "data_path": data_path,
     "processed_data_path": processed_data_path,
     "keys_path": keys_path,
     "num_topics": 50,
     "num_iters_in_e_step": 10,
     "reuse_gamma": True,
-    # "skip_preprocess":True,
+    "skip_preprocess":True,
   }
   start = time.time()
   lda = CuLDA(opt)
@@ -82,7 +81,7 @@ def run_cusim():
               time.time() - start)
   h5_model_path = pjoin(DIR_PATH, "cusim.lda.model.h5")
   lda.save_h5_model(h5_model_path)
-  show_topics(h5_model_path)
+  # show_topics(h5_model_path)
 
 def show_topics(h5_model_path, topk=10):
   h5f = h5py.File(h5_model_path, "r")
