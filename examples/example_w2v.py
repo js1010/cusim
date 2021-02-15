@@ -28,7 +28,7 @@ LOGGER = aux.get_logger()
 DOWNLOAD_PATH = "./res"
 DATASET = "quora-duplicate-questions"
 DATA_PATH = f"./res/{DATASET}.stream.txt"
-PROCESSED_DATA_DIR = "./res/{DATASET}-processed"
+PROCESSED_DATA_DIR = f"./res/{DATASET}-processed"
 CUSIM_MODEL = "./res/cusim.w2v.model"
 GENSIM_MODEL = "./res/gensim.w2v.model"
 
