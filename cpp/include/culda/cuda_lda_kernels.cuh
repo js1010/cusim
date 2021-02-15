@@ -110,6 +110,7 @@ __global__ void EstepKernel(
           }
           
           // comput loss and reset shared mem
+          // see Eq (15) in https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf
           for (int l = threadIdx.x; l < num_topics; l += blockDim.x) {
             _loss_vec[l] = logf(fmaxf(beta[w * num_topics + l], EPS));
             _loss_vec[l] -= logf(fmaxf(_phi[l], EPS));
@@ -143,6 +144,8 @@ __global__ void EstepKernel(
       _new_gamma[j] *= Elogthetad;
       _vali_phi_sum[j] *= Elogthetad;
     }
+    
+    // see Eq (15) in https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf
     float train_loss = ReduceSum(_new_gamma, num_topics);
     float vali_loss = ReduceSum(_vali_phi_sum, num_topics);
     if (threadIdx.x == 0) {
