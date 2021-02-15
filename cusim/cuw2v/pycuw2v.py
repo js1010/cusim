@@ -9,6 +9,8 @@ import os
 from os.path import join as pjoin
 
 import json
+import atexit
+import shutil
 import tempfile
 
 import h5py
@@ -41,13 +43,16 @@ class CuW2V:
     self.words, self.word_count, self.num_words, self.num_docs = \
       None, None, None, None
     self.emb_in, self.emb_out = None, None
+    self.tmp_dirs = []
+    atexit.register(self.remove_tmp)
 
   def preprocess_data(self):
     if self.opt.skip_preprocess:
       return
-    iou = IoUtils()
+    iou = IoUtils(aux.proto_to_dict(self.opt.io))
     if not self.opt.processed_data_dir:
       self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(self.opt.processed_data_dir)
     iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
                              self.opt.processed_data_dir)
 
@@ -58,11 +63,10 @@ class CuW2V:
     count_path = pjoin(data_dir, "count.txt")
     self.logger.info("load key, count from %s, %s", keys_path, count_path)
     with open(keys_path, "rb") as fin:
-      self.words = [line.strip() for line in fin]
+      self.words = [line.strip().decode("utf8") for line in fin]
     with open(count_path, "rb") as fin:
-      self.word_count = np.array([float(line.strip()) for line in fin],
-                                 dtype=np.float32)
-    self.word_count = np.power(self.word_count, self.opt.count_power)
+      self.word_count = np.array([int(line.strip()) for line in fin],
+                                 dtype=np.int64)
     self.num_words = len(self.words)
     assert len(self.words) == len(self.word_count)
 
@@ -74,21 +78,28 @@ class CuW2V:
     self.logger.info("number of words: %d, docs: %d",
                      self.num_words, self.num_docs)
 
+    # normalize word count
+    word_count = np.power(self.word_count, self.opt.count_power,
+                          dtype=np.float64)
+    word_count /= np.sum(word_count)
     if self.opt.neg:
-      self.obj.build_random_table( \
-        self.word_count, self.opt.random_size, self.opt.num_threads)
+      self.obj.build_random_table(word_count, self.opt.random_size)
     else:
-      self.obj.build_huffman_tree(self.word_count)
+      self.obj.build_huffman_tree(word_count.astype(np.float32))
 
     # random initialize alpha and beta
     np.random.seed(self.opt.seed)
-    self.emb_in = np.random.normal( \
+    scale = 1 / np.sqrt(self.opt.num_dims)
+    self.emb_in = np.random.normal(loc=0, scale=scale, \
       size=(self.num_words, self.opt.num_dims)).astype(np.float32)
     out_words = self.num_words if self.opt.neg else self.num_words - 1
-    self.emb_out = np.random.uniform( \
+    self.emb_out = np.random.normal(loc=0, scale=scale, \
       size=(out_words, self.opt.num_dims)).astype(np.float32)
     self.logger.info("emb_in %s, emb_out %s initialized",
                      self.emb_in.shape, self.emb_out.shape)
+
+    if self.opt.pretrained_model.filename:
+      self.load_word2vec_format(**aux.proto_to_dict(self.opt.pretrained_model))
 
     # push it to gpu
     self.obj.load_model(self.emb_in, self.emb_out)
@@ -121,7 +132,7 @@ class CuW2V:
 
       # call cuda kernel
       _loss_nume, _loss_deno = \
-        self.obj.feed_data(cols, indptr)
+        self.obj.feed_data(cols, indptr.astype(np.int32))
 
       # accumulate loss
       loss_nume += _loss_nume
@@ -132,3 +143,72 @@ class CuW2V:
       pbar.update(end, values=[("loss", loss)])
       if end == size:
         break
+
+  def save_h5_model(self, filename):
+    self.logger.info("save h5 format model to %s", filename)
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+    h5f = h5py.File(filename, "w")
+    h5f.create_dataset("emb_in", data=self.emb_in)
+    h5f.create_dataset("emb_out", data=self.emb_out)
+    h5f.create_dataset("keys", data=np.array([word.encode("utf")
+                                              for word in self.words]))
+    h5f.close()
+
+  def save_word2vec_format(self, filename, binary=False, prefix=""):
+    self.logger.info("save word2vec format model to %s, "
+                     "binary: %s, prefix: '%s'", filename, binary, prefix)
+    # save model compatible with gensim and original w2v code by Google
+    with open(filename, "wb") as fout:
+      fout.write(f"{self.num_words} {self.opt.num_dims}\n".encode("utf8"))
+      for idx, word in enumerate(self.words):
+        vec = self.emb_in[idx]
+        if binary:
+          fout.write(f"{prefix}{word} ".encode("utf8") + vec.tobytes())
+        else:
+          fout.write(f"{prefix}{word} "
+                     f"{' '.join(repr(val) for val in vec)}\n".encode("utf8"))
+
+  def load_word2vec_format(self, filename, binary=False,
+                            symmetry=False, no_header=False):
+    self.logger.info("load pretrained model from %s", filename)
+    # copy pretrained model to emb_out as well only if
+    # we use negative sampling, NOT hierarchical softmax
+    assert not symmetry or self.opt.neg, "no symmetry in hierarchical softmax"
+
+    # read variable
+    vector_dict = {}
+    with open(filename, "rb") as fin:
+      if not no_header:
+        fin.readline()  # throw one line
+      for line in fin:
+        if binary:
+          key, vec = line.split()
+          vector_dict[key] = np.fromstring(vec, dtype=np.float32)
+        else:
+          line_vec = line.strip().split()
+          key = line_vec[0].decode("utf8")
+          vec = np.array([float(val) for val in line_vec[1:]],
+                         dtype=np.float32)
+          vector_dict[key] = vec
+
+    # copy to variable
+    loaded_cnt = 0
+    word_idmap = {word: idx for idx, word in enumerate(self.words)}
+    for key, vec in vector_dict.items():
+      assert len(vec) == self.opt.num_dims
+      if key not in word_idmap:
+        continue
+      idx = word_idmap[key]
+      loaded_cnt += 1
+      self.emb_in[idx, :] = vec
+      if symmetry:
+        self.emb_out[idx, :] = vec
+    self.logger.info("loaded count: %d", loaded_cnt)
+
+  def remove_tmp(self):
+    if not self.opt.remove_tmp:
+      return
+    for tmp_dir in self.tmp_dirs:
+      if os.path.exists(tmp_dir):
+        self.logger.info("remove %s", tmp_dir)
+        shutil.rmtree(tmp_dir)

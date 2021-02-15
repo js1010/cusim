@@ -9,6 +9,8 @@ import os
 from os.path import join as pjoin
 
 import json
+import atexit
+import shutil
 import tempfile
 
 import h5py
@@ -44,27 +46,29 @@ class CuLDA:
     self.alpha, self.beta, self.grad_alpha, self.new_beta = \
       None, None, None, None
 
+    self.tmp_dirs = []
+    atexit.register(self.remove_tmp)
+
   def preprocess_data(self):
     if self.opt.skip_preprocess:
       return
-    iou = IoUtils()
-    if not self.opt.processed_data_dir:
-      self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
-    iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
-                             self.opt.processed_data_dir)
+    iou = IoUtils(aux.proto_to_dict(self.opt.io))
+    if not self.opt.processed_data_path:
+      data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(data_dir)
+      self.opt.processed_data_path = pjoin(data_dir, "token.h5")
+    iou.convert_bow_to_h5(self.opt.data_path, self.opt.processed_data_path)
 
   def init_model(self):
-    # load voca
-    data_dir = self.opt.processed_data_dir
-    self.logger.info("load key from %s", pjoin(data_dir, "keys.txt"))
-    with open(pjoin(data_dir, "keys.txt"), "rb") as fin:
-      self.words = [line.strip() for line in fin]
-    self.num_words = len(self.words)
-
-    # count number of docs
-    h5f = h5py.File(pjoin(data_dir, "token.h5"), "r")
+    # count number of docs and load voca
+    assert os.path.exists(self.opt.processed_data_path)
+    assert os.path.exists(self.opt.keys_path)
+    h5f = h5py.File(self.opt.processed_data_path, "r")
     self.num_docs = h5f["indptr"].shape[0] - 1
     h5f.close()
+    with open(self.opt.keys_path, "rb") as fin:
+      self.words = [line.strip().decode("utf8") for line in fin]
+    self.num_words = len(self.words)
 
     self.logger.info("number of words: %d, docs: %d",
                      self.num_words, self.num_docs)
@@ -87,20 +91,34 @@ class CuLDA:
     self.logger.info("grad alpha %s, new beta %s initialized",
                      self.grad_alpha.shape, self.new_beta.shape)
 
+    # set h5 file path to backup gamma
+    if not self.opt.gamma_path:
+      data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(data_dir)
+      self.opt.gamma_path = pjoin(data_dir, "gamma.h5")
+    self.logger.info("backup gamma to %s", self.opt.gamma_path)
+    os.makedirs(os.path.dirname(self.opt.gamma_path), exist_ok=True)
+    h5f = h5py.File(self.opt.gamma_path, "w")
+    h5f.create_dataset("gamma", shape=(self.num_docs, self.opt.num_topics),
+                       dtype=np.float32)
+    h5f.close()
+
     # push it to gpu
     self.obj.load_model(self.alpha, self.beta, self.grad_alpha, self.new_beta)
 
   def train_model(self):
     self.preprocess_data()
     self.init_model()
-    h5f = h5py.File(pjoin(self.opt.processed_data_dir, "token.h5"), "r")
+    h5f = h5py.File(self.opt.processed_data_path, "r")
     for epoch in range(1, self.opt.epochs + 1):
+      gamma_h5f = h5py.File(self.opt.gamma_path, "r+")
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
-      self._train_e_step(h5f)
+      self._train_e_step(h5f, gamma_h5f["gamma"], epoch)
       self._train_m_step()
+      gamma_h5f.close()
     h5f.close()
 
-  def _train_e_step(self, h5f):
+  def _train_e_step(self, h5f, gamma_h5f, epoch):
     offset, size = 0, h5f["cols"].shape[0]
     pbar = aux.Progbar(size, stateful_metrics=["train_loss", "vali_loss"])
     train_loss_nume, train_loss_deno = 0, 0
@@ -115,26 +133,31 @@ class CuLDA:
       beg, end = indptr[0], indptr[-1]
       indptr -= beg
       cols = h5f["cols"][beg:end]
+      counts = h5f["counts"][beg:end]
       vali = (h5f["vali"][beg:end] < self.opt.vali_p).astype(np.bool)
-      offset = next_offset
+      gamma = gamma_h5f[offset:next_offset, :]
 
       # call cuda kernel
       train_loss, vali_loss = \
-        self.obj.feed_data(cols, indptr, vali, self.opt.num_iters_in_e_step)
+        self.obj.feed_data(cols, indptr.astype(np.int32),
+                           vali, counts, gamma,
+                           epoch == 1 or self.opt.reuse_gamma,
+                           self.opt.num_iters_in_e_step)
 
+      gamma_h5f[offset:next_offset, :] = gamma
       # accumulate loss
       train_loss_nume -= train_loss
       vali_loss_nume -= vali_loss
-      vali_cnt = np.count_nonzero(vali)
-      train_cnt = len(vali) - vali_cnt
-      train_loss_deno += train_cnt
-      vali_loss_deno += vali_cnt
+      train_loss_deno += np.sum(counts[~vali])
+      vali_loss_deno += np.sum(counts[vali])
       train_loss = train_loss_nume / (train_loss_deno + EPS)
       vali_loss = vali_loss_nume / (vali_loss_deno + EPS)
 
       # update progress bar
       pbar.update(end, values=[("train_loss", train_loss),
                                ("vali_loss", vali_loss)])
+      offset = next_offset
+
       if end == size:
         break
 
@@ -162,10 +185,27 @@ class CuLDA:
 
     self.obj.push()
 
-  def save_model(self, model_path):
-    self.logger.info("save model path: %s", model_path)
-    h5f = h5py.File(model_path, "w")
+  def save_h5_model(self, filepath, chunk_size=10000):
+    self.logger.info("save h5 format model path to %s", filepath)
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    h5f = h5py.File(filepath, "w")
     h5f.create_dataset("alpha", data=self.alpha)
     h5f.create_dataset("beta", data=self.beta)
-    h5f.create_dataset("keys", data=np.array(self.words))
+    h5f.create_dataset("keys", data=np.array([word.encode("utf")
+                                              for word in self.words]))
+    gamma = h5f.create_dataset("gamma", dtype=np.float32,
+                               shape=(self.num_docs, self.opt.num_topics))
+    h5f_gamma = h5py.File(self.opt.gamma_path, "r")
+    for offset in range(0, self.num_docs, chunk_size):
+      next_offset = min(self.num_docs, offset + chunk_size)
+      gamma[offset:next_offset, :] = h5f_gamma["gamma"][offset:next_offset, :]
+    h5f_gamma.close()
     h5f.close()
+
+  def remove_tmp(self):
+    if not self.opt.remove_tmp:
+      return
+    for tmp_dir in self.tmp_dirs:
+      if os.path.exists(tmp_dir):
+        self.logger.info("remove %s", tmp_dir)
+        shutil.rmtree(tmp_dir)

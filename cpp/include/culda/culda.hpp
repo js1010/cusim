@@ -65,8 +65,11 @@ class CuLDA {
   void LoadModel(float* alpha, float* beta,
       float* grad_alpha, float* new_beta, const int num_words);
   std::pair<float, float> FeedData(
-      const int* indices, const int* indptr, const bool* vali,
-      const int num_indices, const int num_indptr, const int num_iters);
+      const int* indices, const int* indptr,
+      const bool* vali, const float* counts,
+      float* gamma, const bool init_gamma,
+      const int num_indices, const int num_indptr,
+      const int num_iters);
   void Pull();
   void Push();
   int GetBlockCnt();
@@ -78,8 +81,7 @@ class CuLDA {
   std::unique_ptr<CuSimLogger> logger_container_;
   thrust::device_vector<float> dev_alpha_, dev_beta_;
   thrust::device_vector<float> dev_grad_alpha_, dev_new_beta_;
-  thrust::device_vector<float> dev_gamma_, dev_new_gamma_, dev_phi_;
-  thrust::device_vector<int> dev_mutex_;
+  thrust::device_vector<int> dev_locks_;
 
   float *alpha_, *beta_, *grad_alpha_, *new_beta_;
   int block_cnt_, block_dim_;

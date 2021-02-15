@@ -1,0 +1,14 @@
+include cuda_setup.py
+include requirements.txt
+include pyproject.toml
+recursive-include cpp/src/cuw2v/ *.cu
+recursive-include cpp/src/culda/ *.cu
+recursive-include cpp/src/ioutils/ *.cc
+recursive-include cpp/include/cuw2v/ *.cuh
+recursive-include cpp/include/cuw2v/ *.hpp
+recursive-include cpp/include/culda/ *.cuh
+recursive-include cpp/include/culda/ *.hpp
+recursive-include cpp/include/ioutils/ *.cuh
+recursive-include cpp/include/ioutils/ *.hpp
+recursive-include 3rd/json11/ *
+recursive-include 3rd/spdlog/ *
