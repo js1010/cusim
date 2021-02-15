@@ -24,7 +24,14 @@ python setup.py install
 
 ### How to use
 
-- `examples/example1.py` and `examples/README.md` will be very helpful to understand the usage.
+- `examples/example_w2v.py`, `examples/example_lda.py` and `examples/README.md` will be very helpful to understand the usage.
 - paremeter description can be seen in `cusim/proto/config.proto`
 
 ### Performance
+
+
+### Future tasks
+
+- support half precision
+- support multi device (multi device implementation on LDA model will not be that hard, while multi device training on w2v may require some considerations)
+- implement other models such as FastText, BERT, etc
