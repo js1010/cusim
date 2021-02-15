@@ -72,7 +72,7 @@ def run_cusim():
     "num_topics": 50,
     "num_iters_in_e_step": 10,
     "reuse_gamma": True,
-    "skip_preprocess":True,
+    "skip_preprocess": os.path.exists(processed_data_path),
   }
   start = time.time()
   lda = CuLDA(opt)
@@ -81,23 +81,13 @@ def run_cusim():
               time.time() - start)
   h5_model_path = pjoin(DIR_PATH, "cusim.lda.model.h5")
   lda.save_h5_model(h5_model_path)
-  # show_topics(h5_model_path)
+  show_cusim_topics(h5_model_path)
 
-def show_topics(h5_model_path, topk=10):
+def show_cusim_topics(h5_model_path, topk=10):
   h5f = h5py.File(h5_model_path, "r")
   beta = h5f["beta"][:, :].T
   keys = h5f["keys"][:]
-  for idx in range(beta.shape[0]):
-    print("=" * 50)
-    print(f"topic {idx + 1}")
-    print("-" * 50)
-    _beta = beta[idx, :]
-    indices = np.argsort(-_beta)[:topk]
-    for rank, wordid in enumerate(indices):
-      word = keys[wordid].decode("utf8")
-      prob = _beta[wordid]
-      print(f"rank {rank + 1}. {word}: {prob}")
-
+  show_topics(beta, keys, topk, "cusim.topics.txt")
 
 def build_gensim_corpus():
   corpus_path = pjoin(DIR_PATH, f"docword.{DATASET}.pk")
@@ -140,19 +130,48 @@ def run_gensim():
 
   start = time.time()
   # 3 = real cores - 1
-  lda = LdaMulticore(docs, num_topics=50, workers=1,
+  lda = LdaMulticore(docs, num_topics=50, workers=None,
                      id2word=id2word, iterations=10)
   LOGGER.info("elapsed for training lda using gensim: %.4e sec",
               time.time() - start)
-  lda.save(pjoin(DIR_PATH, "gensim.lda.model"))
+  model_path = pjoin(DIR_PATH, "gensim.lda.model")
+  LOGGER.info("save gensim lda model to %s", model_path)
+  lda.save(model_path)
+  show_gensim_topics(model_path)
 
-def get_gensim_perplexity(model_path=None):
+def show_gensim_topics(model_path=None, topk=10):
+  # load beta
   model_path = model_path or pjoin(DIR_PATH, "gensim.lda.model")
   LOGGER.info("load gensim lda model from %s", model_path)
   lda = LdaMulticore.load(model_path)
-  docs = build_gensim_corpus()
-  perp = lda.log_perplexity(docs[:100])
-  print(perp)
+  beta = lda.state.get_lambda()
+  beta /= np.sum(beta, axis=1)[:, None]
+
+  # load keys
+  keys_path = pjoin(DIR_PATH, f"vocab.{DATASET}.txt")
+  LOGGER.info("load vocab from %s", keys_path)
+  with open(keys_path, "rb") as fin:
+    keys = [line.strip() for line in fin]
+  show_topics(beta, keys, topk, "gensim.topics.txt")
+
+def show_topics(beta, keys, topk, result_path):
+  LOGGER.info("save results to %s (topk: %d)", result_path, topk)
+  fout = open(result_path, "w")
+  for idx in range(beta.shape[0]):
+    print("=" * 50)
+    fout.write("=" * 50 + "\n")
+    print(f"topic {idx + 1}")
+    fout.write(f"topic {idx + 1}" + "\n")
+    print("-" * 50)
+    fout.write("-" * 50 + "\n")
+    _beta = beta[idx, :]
+    indices = np.argsort(-_beta)[:topk]
+    for rank, wordid in enumerate(indices):
+      word = keys[wordid].decode("utf8")
+      prob = _beta[wordid]
+      print(f"rank {rank + 1}. {word}: {prob}")
+      fout.write(f"rank {rank + 1}. {word}: {prob}" + "\n")
+  fout.close()
 
 
 if __name__ == "__main__":
