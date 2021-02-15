@@ -38,14 +38,41 @@ python setup.py install
 
 | attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
 |:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
-| training time (sec) |           892.596    |           544.212    |           310.727    |           226.472    |           **16.1615**   |
-| pearson             |             0.487832 |             0.487696 |             0.482821 |             0.487136 |            **0.492101** |
-| spearman            |             0.500846 |             0.506214 |             0.501048 |             **0.506718** |            0.479468 |
+| training time (sec) |           892.596    |           544.212    |           310.727    |           226.472    |       **16.162**   |
+| pearson             |             0.487832 |             0.487696 |             0.482821 |             0.487136 |       **0.492101** |
+| spearman            |             0.500846 |             0.506214 |             0.501048 |         **0.506718** |            0.479468 |
+
+- W2V (skip gram, negative sampling)
+
+| attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
+|:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
+| training time (sec) |           586.545    |           340.489    |           220.804    |           146.23     |           33.9173   |
+| pearson             |             0.354448 |             0.353952 |             0.352398 |             0.352925 |            0.342999 |
+| spearman            |             0.369146 |             0.369365 |             0.370565 |             0.365822 |            0.339781 |
+
+- W2V (CBOW, hierarchical softmax)
+
+| attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
+|:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
+| training time (sec) |           250.135    |           155.121    |           103.57     |            73.8073   |        **6.20787**  |
+| pearson             |             0.309651 |             0.321803 |             0.324854 |             0.314255 |        **0.480298** |
+| spearman            |             0.294047 |             0.308723 |             0.318293 |             0.300591 |        **0.480971** |
+
+- W2V (CBOW, negative sampling)
+
+| attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
+|:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
+| training time (sec) |           176.923    |           100.369    |            69.7829   |            49.9274   |        **9.90391**  |
+| pearson             |             0.18772  |             0.193152 |             0.204509 |             0.187924 |        **0.368202** |
+| spearman            |             0.243975 |             0.24587  |             0.260531 |             0.237441 |        **0.358042** |
 
 - LDA (`nytimes` dataset from https://archive.ics.uci.edu/ml/datasets/bag+of+words)
   - I found that setting `workers` variable in gensim LdaMulticore does not work properly (it uses all cores in instance anyway), so I just compared the speed between cusim with single GPU and gensim with 8 vcpus. 
   - One can compare the quality of modeling by looking at `examples/cusim.topics.txt` and `examples/gensim.topics.txt`.
 
+| attr                |   gensim (8 vpus) |   cusim |
+|:--------------------|------------------:|--------:|
+| training time (sec) |           447.376 | 76.6972 |
 
 ### Future tasks
 
