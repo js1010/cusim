@@ -35,7 +35,7 @@ with open("requirements.txt", "r") as fin:
 
 MAJOR = 0
 MINOR = 0
-MICRO = 0
+MICRO = 1
 RELEASE = True
 STAGE = {True: '', False: 'b'}.get(RELEASE)
 VERSION = f'{MAJOR}.{MINOR}.{MICRO}{STAGE}'
