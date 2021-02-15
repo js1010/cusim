@@ -9,6 +9,8 @@ import os
 from os.path import join as pjoin
 
 import json
+import atexit
+import shutil
 import tempfile
 
 import h5py
@@ -41,6 +43,8 @@ class CuW2V:
     self.words, self.word_count, self.num_words, self.num_docs = \
       None, None, None, None
     self.emb_in, self.emb_out = None, None
+    self.tmp_dirs = []
+    atexit.register(self.remove_tmp)
 
   def preprocess_data(self):
     if self.opt.skip_preprocess:
@@ -48,6 +52,7 @@ class CuW2V:
     iou = IoUtils(aux.proto_to_dict(self.opt.io))
     if not self.opt.processed_data_dir:
       self.opt.processed_data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(self.opt.processed_data_dir)
     iou.convert_stream_to_h5(self.opt.data_path, self.opt.word_min_count,
                              self.opt.processed_data_dir)
 
@@ -199,3 +204,11 @@ class CuW2V:
       if symmetry:
         self.emb_out[idx, :] = vec
     self.logger.info("loaded count: %d", loaded_cnt)
+
+  def remove_tmp(self):
+    if not self.opt.remove_tmp:
+      return
+    for tmp_dir in self.tmp_dirs:
+      if os.path.exists(tmp_dir):
+        self.logger.info("remove %s", tmp_dir)
+        shutil.rmtree(tmp_dir)

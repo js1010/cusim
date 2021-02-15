@@ -34,7 +34,7 @@ message CuLDAConfigProto {
   optional int32 num_iters_in_e_step = 12 [default = 5];
   optional double vali_p = 13 [default = 0.2];
   optional int32 seed = 14 [default = 777];
-  optional bool remove_tmp = 16 [default = true];
+  optional bool remove_tmp = 19 [default = true];
   optional IoUtilsConfigProto io = 15;
 }
 
@@ -73,6 +73,7 @@ message CuW2VConfigProto {
   optional bool cbow_mean = 20 [default = true];
   optional double lr = 21 [default = 0.001];
   optional int32 window_size = 22 [default = 5];
+  optional bool remove_tmp = 26 [default = true];
 
   optional IoUtilsConfigProto io = 24;
   optional W2VPretrainedModel pretrained_model = 25;
