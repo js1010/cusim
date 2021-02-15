@@ -79,3 +79,4 @@ python setup.py install
 - support half precision
 - support multi device (multi device implementation on LDA model will not be that hard, while multi device training on w2v may require some considerations)
 - implement other models such as [FastText](https://arxiv.org/pdf/1607.04606.pdf), [BERT](https://arxiv.org/pdf/1810.04805.pdf), etc
+- **contribution is always welcome**
