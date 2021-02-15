@@ -34,14 +34,13 @@ python setup.py install
 - To evaluate w2v model, I used `evaluate_word_pairs` function ([ref link](https://radimrehurek.com/gensim/auto_examples/tutorials/run_word2vec.html#evaluating)) in gensim, note that better performance on WS-353 test set does not necessarily mean that the model will workbetter in application as desribed on the link. However, it is good to be measured quantitively and fast training time will be at least very objective measure of the performaance.
   - I trained W2V model on `quora-duplicat-questions` dataset from gensim downloader api on GPU with cusim and compare the performance (both speed and model quality) with gensim.
 - To evaluate LDA model, I found there is no good way to measure the quality of traing results quantitatively. But we can check the model by looking at the top words of each topic. Also, we can compare the training time quantitatively.
-- W2V (CBOW, negative sampling)
+- W2V (skip gram, hierarchical softmax)
 
-| attr          |   1 workers |   2 workers |   4 workers |   8 workers |      GPU |
-|:--------------|------------:|------------:|------------:|------------:|---------:|
-| training_time |  181.009    |  102.302    |   58.9811   |   47.7482   | **9.60324**  |
-| pearson       |    0.203882 |    0.207705 |    0.221758 |    0.198408 | **0.331749** |
-| spearman      |    0.25208  |    0.254706 |    0.275231 |    0.238611 | **0.295346** |
-
+| attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
+|:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
+| training time (sec) |           892.596    |           544.212    |           310.727    |           226.472    |           **16.1615**   |
+| pearson             |             0.487832 |             0.487696 |             0.482821 |             0.487136 |            **0.492101** |
+| spearman            |             0.500846 |             0.506214 |             0.501048 |             **0.506718** |            0.479468 |
 
 - LDA (`nytimes` dataset from https://archive.ics.uci.edu/ml/datasets/bag+of+words)
   - I found that setting `workers` variable in gensim LdaMulticore does not work properly (it uses all cores in instance anyway), so I just compared the speed between cusim with single GPU and gensim with 8 vcpus. 
