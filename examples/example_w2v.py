@@ -126,22 +126,37 @@ def evaluate_w2v_model(model=GENSIM_MODEL):
   LOGGER.info("evaluation results: %s", results)
   return results
 
-def run_experiments(sg0=False, hs0=False):
-  training_time = {"attr": "training_time"}
+# gpu model variable is for being displayed in markdown
+# please put the real gpu modelname
+def run_experiments(skip_gram=False, hierarchical_softmax=False,
+                    gpu_model="NVIDIA T4"):
+  training_time = {"attr": "training time (sec)"}
   pearson = {"attr": "pearson"}
   spearman = {"attr": "spearman"}
   for i in [1, 2, 4, 8]:
-    elapsed, evals = run_gensim(sg0, hs0, i)
-    training_time[f"{i} workers"] = elapsed
-    pearson[f"{i} workers"] = evals[0][0]
-    spearman[f"{i} workers"] = evals[1][0]
-  elapsed, evals = run_cusim(sg0, hs0)
-  training_time["GPU"] = elapsed
-  pearson["GPU"] = evals[0][0]
-  spearman["GPU"] = evals[1][0]
+    elapsed, evals = run_gensim(skip_gram, hierarchical_softmax, i)
+    training_time[f"{i} workers (gensim)"] = elapsed
+    pearson[f"{i} workers (gensim)"] = evals[0][0]
+    spearman[f"{i} workers (gensim)"] = evals[1][0]
+  elapsed, evals = run_cusim(skip_gram, hierarchical_softmax)
+  gpu_title = f"{gpu_model} (cusim)"
+  training_time[gpu_title] = elapsed
+  pearson[gpu_title] = evals[0][0]
+  spearman[gpu_title] = evals[1][0]
   df0 = pd.DataFrame([training_time, pearson, spearman])
   df0.set_index("attr", inplace=True)
   print(df0.to_markdown())
+
+# gpu model variable is for being displayed in markdown
+# please put the real gpu modelname
+def run_various_experiments(gpu_model="NVIDIA T4"):
+  for sg0 in [True, False]:
+    for hs0 in [True, False]:
+      print("=" * 100)
+      LOGGER.info("setting: %s, %s",
+                  "skip gram" if sg0 else "cbow",
+                  "hierarchical softmax" if hs0 else "negative sampling")
+      run_experiments(sg0, hs0, gpu_model)
 
 
 if __name__ == "__main__":

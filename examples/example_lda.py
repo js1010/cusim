@@ -17,6 +17,7 @@ import fire
 import wget
 import h5py
 import numpy as np
+import pandas as pd
 
 # import gensim
 from gensim.models.ldamulticore import LdaMulticore
@@ -77,11 +78,12 @@ def run_cusim():
   start = time.time()
   lda = CuLDA(opt)
   lda.train_model()
-  LOGGER.info("elapsed for training LDA using cusim: %.4e sec",
-              time.time() - start)
+  el0 = time.time() - start
+  LOGGER.info("elapsed for training LDA using cusim: %.4e sec", el0)
   h5_model_path = pjoin(DIR_PATH, "cusim.lda.model.h5")
   lda.save_h5_model(h5_model_path)
   show_cusim_topics(h5_model_path)
+  return el0
 
 def show_cusim_topics(h5_model_path, topk=10):
   h5f = h5py.File(h5_model_path, "r")
@@ -129,15 +131,15 @@ def run_gensim():
       id2word[idx] = line.strip()
 
   start = time.time()
-  # 3 = real cores - 1
   lda = LdaMulticore(docs, num_topics=50, workers=None,
-                     id2word=id2word, iterations=10)
-  LOGGER.info("elapsed for training lda using gensim: %.4e sec",
-              time.time() - start)
+                    id2word=id2word, iterations=10)
+  el0 = time.time() - start
+  LOGGER.info("elapsed for training lda using gensim: %.4e sec", el0)
   model_path = pjoin(DIR_PATH, "gensim.lda.model")
   LOGGER.info("save gensim lda model to %s", model_path)
   lda.save(model_path)
   show_gensim_topics(model_path)
+  return el0
 
 def show_gensim_topics(model_path=None, topk=10):
   # load beta
@@ -172,6 +174,15 @@ def show_topics(beta, keys, topk, result_path):
       print(f"rank {rank + 1}. {word}: {prob}")
       fout.write(f"rank {rank + 1}. {word}: {prob}" + "\n")
   fout.close()
+
+
+def run_experiments():
+  training_time = {"attr": "training time (sec)"}
+  training_time["gensim (8 vpus)"] = run_gensim()
+  training_time["cusim"] = run_cusim()
+  df0 = pd.DataFrame([training_time])
+  df0.set_index("attr", inplace=True)
+  print(df0.to_markdown())
 
 
 if __name__ == "__main__":
