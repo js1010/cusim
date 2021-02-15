@@ -46,9 +46,9 @@ python setup.py install
 
 | attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
 |:--------------------|---------------------:|---------------------:|---------------------:|---------------------:|--------------------:|
-| training time (sec) |           586.545    |           340.489    |           220.804    |           146.23     |           33.9173   |
-| pearson             |             0.354448 |             0.353952 |             0.352398 |             0.352925 |            0.342999 |
-| spearman            |             0.369146 |             0.369365 |             0.370565 |             0.365822 |            0.339781 |
+| training time (sec) |           586.545    |           340.489    |           220.804    |           146.23     |       **33.9173**   |
+| pearson             |             0.354448 |             0.353952 |             0.352398 |             0.352925 |        **0.360436** |
+| spearman            |             0.369146 |             0.369365 |         **0.370565** |             0.365822 |        0.355204     |
 
 - W2V (CBOW, hierarchical softmax)
 
@@ -70,7 +70,7 @@ python setup.py install
   - I found that setting `workers` variable in gensim LdaMulticore does not work properly (it uses all cores in instance anyway), so I just compared the speed between cusim with single GPU and gensim with 8 vcpus. 
   - One can compare the quality of modeling by looking at `examples/cusim.topics.txt` and `examples/gensim.topics.txt`.
 
-| attr                |   gensim (8 vpus) |   cusim |
+| attr                |   gensim (8 vpus) |   cusim (NVIDIA T4)|
 |:--------------------|------------------:|--------:|
 | training time (sec) |           447.376 | **76.6972** |
 
