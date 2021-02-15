@@ -9,6 +9,8 @@ import os
 from os.path import join as pjoin
 
 import json
+import atexit
+import shutil
 import tempfile
 
 import h5py
@@ -44,12 +46,16 @@ class CuLDA:
     self.alpha, self.beta, self.grad_alpha, self.new_beta = \
       None, None, None, None
 
+    self.tmp_dirs = []
+    atexit.register(self.remove_tmp)
+
   def preprocess_data(self):
     if self.opt.skip_preprocess:
       return
     iou = IoUtils(aux.proto_to_dict(self.opt.io))
     if not self.opt.processed_data_path:
       data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(data_dir)
       self.opt.processed_data_path = pjoin(data_dir, "token.h5")
     iou.convert_bow_to_h5(self.opt.data_path, self.opt.processed_data_path)
 
@@ -88,6 +94,7 @@ class CuLDA:
     # set h5 file path to backup gamma
     if not self.opt.gamma_path:
       data_dir = tempfile.TemporaryDirectory().name
+      self.tmp_dirs.append(data_dir)
       self.opt.gamma_path = pjoin(data_dir, "gamma.h5")
     self.logger.info("backup gamma to %s", self.opt.gamma_path)
     os.makedirs(os.path.dirname(self.opt.gamma_path), exist_ok=True)
@@ -103,13 +110,13 @@ class CuLDA:
     self.preprocess_data()
     self.init_model()
     h5f = h5py.File(self.opt.processed_data_path, "r")
-    gamma_h5f = h5py.File(self.opt.gamma_path, "r+")
     for epoch in range(1, self.opt.epochs + 1):
+      gamma_h5f = h5py.File(self.opt.gamma_path, "r+")
       self.logger.info("Epoch %d / %d", epoch, self.opt.epochs)
       self._train_e_step(h5f, gamma_h5f["gamma"], epoch)
       self._train_m_step()
+      gamma_h5f.close()
     h5f.close()
-    gamma_h5f.close()
 
   def _train_e_step(self, h5f, gamma_h5f, epoch):
     offset, size = 0, h5f["cols"].shape[0]
@@ -178,7 +185,7 @@ class CuLDA:
 
     self.obj.push()
 
-  def save_h5_model(self, filepath):
+  def save_h5_model(self, filepath, chunk_size=10000):
     self.logger.info("save h5 format model path to %s", filepath)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     h5f = h5py.File(filepath, "w")
@@ -186,4 +193,19 @@ class CuLDA:
     h5f.create_dataset("beta", data=self.beta)
     h5f.create_dataset("keys", data=np.array([word.encode("utf")
                                               for word in self.words]))
+    gamma = h5f.create_dataset("gamma", dtype=np.float32,
+                               shape=(self.num_docs, self.opt.num_topics))
+    h5f_gamma = h5py.File(self.opt.gamma_path, "r")
+    for offset in range(0, self.num_docs, chunk_size):
+      next_offset = min(self.num_docs, offset + chunk_size)
+      gamma[offset:next_offset, :] = h5f_gamma["gamma"][offset:next_offset, :]
+    h5f_gamma.close()
     h5f.close()
+
+  def remove_tmp(self):
+    if not self.opt.remove_tmp:
+      return
+    for tmp_dir in self.tmp_dirs:
+      if os.path.exists(tmp_dir):
+        self.logger.info("remove %s", tmp_dir)
+        shutil.rmtree(tmp_dir)

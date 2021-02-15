@@ -34,6 +34,7 @@ message CuLDAConfigProto {
   optional int32 num_iters_in_e_step = 12 [default = 5];
   optional double vali_p = 13 [default = 0.2];
   optional int32 seed = 14 [default = 777];
+  optional bool remove_tmp = 16 [default = true];
   optional IoUtilsConfigProto io = 15;
 }
 
