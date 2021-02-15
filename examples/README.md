@@ -14,7 +14,7 @@ pip install -r requirements.txt
 python example_w2v.py run_experiments --sg0=True --hs0=True
 ```
 
-7. run lda experiments 
+3. run lda experiments 
 
 ```shell
 python example_lda.py run_experiments
