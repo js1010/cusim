@@ -51,5 +51,5 @@ before_install:
   - pip install -U pip
   - PATH=${PATH}:${PWD}
 
-- script:
+script:
   - python setup.py install
