@@ -29,10 +29,8 @@ matrix:
 addons:
   apt:
     packages:
-      - cmake
-      - python3
+      - python3.6
       - python3-pip
-      - python3-setuptools
 
 before_install:
   - INSTALLER=cuda-repo-${UBUNTU_VERSION}_${CUDA}_amd64.deb
@@ -52,4 +50,4 @@ before_install:
   - PATH=${PATH}:${PWD}
 
 script:
-  - python setup.py install
+  - python3.6 setup.py install
