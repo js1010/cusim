@@ -48,8 +48,8 @@ before_install:
   - PATH=${CUDA_HOME}/bin:${PATH}
   - wget https://github.com/ninja-build/ninja/releases/download/v1.9.0/ninja-linux.zip
   - unzip ninja-linux.zip
-  - PATH=${PATH}:${PWD}
   - pip install -U pip
+  - PATH=${PATH}:${PWD}
 
 - script:
   - python setup.py install
