@@ -18,7 +18,6 @@ CUSIM is a project to speed up various ML models (e.g. topic modeling, word embe
    Installation <install>
    Word2Vec <w2v>
    LDA <lda>
-   Performance <performance>
 
 
 Indices and tables
