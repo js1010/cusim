@@ -113,7 +113,7 @@ Example Codes
 Performance
 -----------
 
-- Data: quora-duplicate-questions
+- Data: quora-duplicate-questions from `gensim downloader api <https://radimrehurek.com/gensim/downloader.html#module-gensim.downloader>`_
 - skip gram, hierarchical softmax
 
 +---------------------+----------------------+----------------------+----------------------+----------------------+---------------------+
