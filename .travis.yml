@@ -7,18 +7,6 @@ compiler:
 
 matrix:
   include:
-    - name: CUDA 8
-      env:
-      - CUDA=8.0.61-1
-      - CUDA_SHORT=8.0
-      - UBUNTU_VERSION=ubuntu1804
-      dist: bionic
-    - name: CUDA 9
-      env:
-      - CUDA=9.2.148-1
-      - CUDA_SHORT=9.2
-      - UBUNTU_VERSION=ubuntu1804
-      dist: bionic
     - name: CUDA 10
       env:
       - CUDA=10.1.105-1
@@ -52,4 +40,4 @@ before_install:
   - python3.6 -m grpc_tools.protoc --python_out cusim/ --proto_path cusim/proto/ config.proto
 
 script:
-  - python3.6 setup.py install
+  - sudo python3.6 setup.py install
