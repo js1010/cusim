@@ -1,4 +1,4 @@
-# refernece: https://github.com/jeremad/cuda-travis/blob/master/.travis.yml
+# reference: https://github.com/jeremad/cuda-travis/blob/master/.travis.yml
 language: cpp
 
 sudo: enabled
