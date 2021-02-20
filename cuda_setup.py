@@ -119,9 +119,10 @@ def locate_cuda():
                 'include': os.path.join(home, 'include'),
                 'lib64':   os.path.join(home, 'lib64')}
   cuda_ver = os.path.basename(os.path.realpath(home)).split("-")[1].split(".")
-  cuda_ver = 10 * int(cuda_ver[0]) + int(cuda_ver[1])
-  assert cuda_ver >= 70, f"too low cuda ver {cuda_ver}"
-  logging.info("cuda_ver: %s", cuda_ver)
+  major, minor = int(cuda_ver[0]), int(cuda_ver[1])
+  cuda_ver = 10 * major + minor
+  assert cuda_ver >= 70, f"too low cuda ver {major}.{minor}"
+  print(f"cuda_ver: {major}.{minor}")
   arch = get_cuda_arch(cuda_ver)
   sm_list = get_cuda_sm_list(cuda_ver)
   compute = get_cuda_compute(cuda_ver)
@@ -129,7 +130,7 @@ def locate_cuda():
     [f"-gencode=arch=compute_{sm},code=sm_{sm}" for sm in sm_list] + \
     [f"-gencode=arch=compute_{compute},code=compute_{compute}",
      "-ptxas-options=-v", "-O2"]
-  logging.info("nvcc post args: %s", post_args)
+  print(f"nvcc post args: {post_args}")
   if HALF_PRECISION:
     post_args = [flag for flag in post_args if "52" not in flag]
 
