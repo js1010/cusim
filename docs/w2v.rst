@@ -6,13 +6,13 @@ Parameters
 ----------
 
 
-- see `github <https://github.com/js1010/cusim/blob/f12d18a65fc603b99350705b235d374654c87517/cusim/proto/config.proto#L95-L159>`_ 
+- see `CuW2VConfigProto <https://github.com/js1010/cusim/blob/f12d18a65fc603b99350705b235d374654c87517/cusim/proto/config.proto#L95-L159>`_ 
 
 
 Example Codes
 -------------
 
-- Full source code is in `github <https://github.com/js1010/cusim/blob/e29deb0a0a39a4b739aa1bc38ea9de897a8de8de/examples/example_w2v.py>`_
+- Full source code is in `examples/example_w2v.py <https://github.com/js1010/cusim/blob/main/examples/example_w2v.py>`_
 
 - before running example codes, run 
 
