@@ -27,7 +27,8 @@ def find_in_path(name, path):
       return os.path.abspath(binpath)
   return None
 
-
+# reference: https://arnon.dk/
+# matching-sm-architectures-arch-and-gencode-for-various-nvidia-cards/
 def get_cuda_sm_list(cuda_ver):
   if "CUDA_SM_LIST" in os.environ:
     sm_list = os.environ["CUDA_SM_LIST"].split(",")
