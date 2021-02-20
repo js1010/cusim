@@ -33,6 +33,7 @@ before_install:
   - sudo apt update
   - sudo apt install -y python3-pip python3.6
   - pip3 install -U pip
+  - pip3 install setuptools
   - pip3 install -r requirements.txt
   - INSTALLER=cuda-repo-${UBUNTU_VERSION}_${CUDA}_amd64.deb
   - wget http://developer.download.nvidia.com/compute/cuda/repos/${UBUNTU_VERSION}/x86_64/${INSTALLER}
