@@ -92,7 +92,7 @@ extensions = [
             extra_compile_args=extra_compile_args,
             extra_link_args=["-fopenmp"],
             library_dirs=[CUDA['lib64']],
-            libraries=['cudart', 'cublas', 'curand'],
+            libraries=['cudart', 'curand'],
             extra_objects=[],
             include_dirs=[ \
               "cpp/include/", np.get_include(), pybind11.get_include(),
@@ -107,7 +107,7 @@ extensions = [
             extra_compile_args=extra_compile_args,
             extra_link_args=["-fopenmp"],
             library_dirs=[CUDA['lib64']],
-            libraries=['cudart', 'cublas', 'curand'],
+            libraries=['cudart', 'curand'],
             extra_objects=[],
             include_dirs=[ \
               "cpp/include/", np.get_include(), pybind11.get_include(),
