@@ -5,6 +5,9 @@ Word2Vec
 Parameters
 ----------
 
+
+- test
+
 .. autoclass:: cusim.cuw2v.pycuw2v.CuW2V
    :members:
    :inherited-members:
