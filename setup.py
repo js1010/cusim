@@ -82,10 +82,7 @@ extensions = [
             include_dirs=[ \
               "cpp/include/", np.get_include(), pybind11.get_include(),
               pybind11.get_include(True),
-              "3rd/json11", "3rd/spdlog/include"]), \
-]
-
-cuda_extensions = [
+              "3rd/json11", "3rd/spdlog/include"]),
   Extension("cusim.culda.culda_bind",
             sources= util_srcs + [ \
               "cpp/src/culda/culda.cu",
@@ -117,9 +114,6 @@ cuda_extensions = [
               pybind11.get_include(True), CUDA['include'],
               "3rd/json11", "3rd/spdlog/include"]),
 ]
-
-if CUDA is not None:
-  extensions += cuda_extensions
 
 
 # Return the git revision as a string

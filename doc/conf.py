@@ -19,14 +19,13 @@
 
 # -- Project information -----------------------------------------------------
 import sphinx_rtd_theme
-from cusim import version
 
 project = 'cusim'
 copyright = '2021, Jisang Yoon'
 author = 'Jisang Yoon'
 
 # The full version, including alpha/beta/rc tags
-release = version.short_version
+release = "0.0.1"
 
 
 # -- General configuration ---------------------------------------------------
