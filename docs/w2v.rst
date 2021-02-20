@@ -3,7 +3,7 @@ Word2Vec
 
 
 Parameters
-==========
+----------
 
 .. autoclass:: cusim.cuw2v.pycuw2v.CuW2V
    :members:
@@ -11,7 +11,7 @@ Parameters
 
 
 Example Codes
-=============
+-------------
 
 - Full source code is in `github <https://github.com/js1010/cusim/blob/e29deb0a0a39a4b739aa1bc38ea9de897a8de8de/examples/example_w2v.py>`_
 
@@ -22,10 +22,7 @@ Example Codes
   pip install -r examples/requirements.txt
 
 
-
-
-Download and preprocess data
-----------------------------
+- Download and preprocess data
 
 .. code-block:: python
   
@@ -68,8 +65,7 @@ Download and preprocess data
   fout.close()
   os.rename(DATA_PATH + ".tmp", DATA_PATH)
 
-Train cusim word2vec
---------------------
+- Train cusim word2vec
 
 .. code-block:: python
   
@@ -101,8 +97,7 @@ Train cusim word2vec
   w2v.train_model()
 
 
-Save and evaluate model
------------------------
+- Save and evaluate model
 
 .. code-block:: python
   
