@@ -108,9 +108,10 @@ Performance
 
 - Data: `nytimes dataset <https://archive.ics.uci.edu/ml/datasets/bag+of+words>`_
 - Topic Results
-  - `cusim lda results <https://github.com/js1010/cusim/blob/main/examples/cusim.topics.txt>`_
-  - `gensim lda results <https://github.com/js1010/cusim/blob/main/examples/gensim.topics.txt>`_
+    - `cusim lda results <https://github.com/js1010/cusim/blob/main/examples/cusim.topics.txt>`_
+    - `gensim lda results <https://github.com/js1010/cusim/blob/main/examples/gensim.topics.txt>`_
 - Time Performance
+    - Experimented in `AWS g4dn 2xlarge <https://aws.amazon.com/ec2/instance-types/g4/>`_ (One NVIDIA T4 and 8 vcpus of 8 Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz)
 
 +---------------------+-------------------+--------------------+
 | attr                |   gensim (8 vpus) |   cusim (NVIDIA T4)|

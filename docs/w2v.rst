@@ -115,6 +115,7 @@ Performance
 
 - Data: quora-duplicate-questions from `gensim downloader api <https://radimrehurek.com/gensim/downloader.html#module-gensim.downloader>`_
 - skip gram, hierarchical softmax
+- Experimented in `AWS g4dn 2xlarge <https://aws.amazon.com/ec2/instance-types/g4/>`_ (One NVIDIA T4 and 8 vcpus of 8 Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz)
 
 +---------------------+----------------------+----------------------+----------------------+----------------------+---------------------+
 | attr                |   1 workers (gensim) |   2 workers (gensim) |   4 workers (gensim) |   8 workers (gensim) |   NVIDIA T4 (cusim) |
