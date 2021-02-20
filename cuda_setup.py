@@ -257,5 +257,5 @@ class CudaBuildExt(setuptools_build_ext):
 
 
 CUDA = locate_cuda()
-assert CUDA is not None
+# assert CUDA is not None
 BUILDEXT = CudaBuildExt if CUDA else setuptools_build_ext
