@@ -129,7 +129,7 @@ def locate_cuda():
   post_args = [f"-arch=sm_{arch}"] + \
     [f"-gencode=arch=compute_{sm},code=sm_{sm}" for sm in sm_list] + \
     [f"-gencode=arch=compute_{compute},code=compute_{compute}",
-     "-ptxas-options=-v", "-O2"]
+     "--ptxas-options=-v", "-O2"]
   print(f"nvcc post args: {post_args}")
   if HALF_PRECISION:
     post_args = [flag for flag in post_args if "52" not in flag]
