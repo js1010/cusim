@@ -78,7 +78,7 @@ def get_cuda_arch(cuda_ver):
       arch = "50"
     if cuda_ver == 110:
       arch = "52"
-    if cuda_ver == "111":
+    if cuda_ver == 111:
       arch = "80"
   return arch
 
@@ -120,7 +120,7 @@ def locate_cuda():
                 'lib64':   os.path.join(home, 'lib64')}
   cuda_ver = os.path.basename(os.path.realpath(home)).split("-")[1].split(".")
   cuda_ver = 10 * int(cuda_ver[0]) + int(cuda_ver[1])
-  assert cuda_ver >= 700, f"too low cuda ver {cuda_ver}"
+  assert cuda_ver >= 70, f"too low cuda ver {cuda_ver}"
   logging.info("cuda_ver: %s", cuda_ver)
   arch = get_cuda_arch(cuda_ver)
   sm_list = get_cuda_sm_list(cuda_ver)
