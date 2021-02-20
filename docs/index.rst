@@ -4,10 +4,10 @@
    contain the root `toctree` directive.
 
 CUSIM - Superfast implementation of Word2Vec and LDA
-=================================
+====================================================
 
 
-CUSIM is a project to speed up various ML models (e.g. topic modeling, word embedding, etc) by CUDA. It would be nice to think of it as gensim's GPU version project. As a starting step, I implemented the most widely used word embedding model, the word2vec model, and the most representative topic model, the LDA (Latent Dirichlet Allocation) model.
+CUSIM is a project to speed up various ML models (e.g. topic modeling, word embedding, etc) by CUDA. It would be nice to think of it as `gensim <https://github.com/RaRe-Technologies/gensim>`_'s GPU version project. As a starting step, I implemented the most widely used word embedding model, the `word2vec <https://arxiv.org/pdf/1301.3781.pdf>`_ model, and the most representative topic model, the `LDA (Latent Dirichlet Allocation) <https://www.jmlr.org/papers/volume3/blei03a/blei03a.pdf>`_ model.
 
 
 Resources 
@@ -17,12 +17,14 @@ Resources
 
 .. toctree::
    :maxdepth: 2
-   :caption: Overview
+   :caption: Contents
 
-   Installation
-   GettingStarted
-   examples
+   Installation <install>
+   Word2Vec <w2v>
+   LDA <lda>
+   Performance <performance>
    Release Notes <https://github.com/js1010/cusim/releases>
+
 
 Indices and tables
 ==================
