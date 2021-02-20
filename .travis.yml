@@ -34,7 +34,6 @@ before_install:
   - sudo apt install -y python3-pip python3.6
   - pip3.6 install -U pip
   - pip3.6 install -r requirements.txt
-  - python3.6 -m grpc_tools.protoc --python_out cusim/ --proto_path cusim/proto/ config.proto
   - INSTALLER=cuda-repo-${UBUNTU_VERSION}_${CUDA}_amd64.deb
   - wget http://developer.download.nvidia.com/compute/cuda/repos/${UBUNTU_VERSION}/x86_64/${INSTALLER}
   - sudo dpkg -i ${INSTALLER}
@@ -49,6 +48,7 @@ before_install:
   - wget https://github.com/ninja-build/ninja/releases/download/v1.9.0/ninja-linux.zip
   - unzip ninja-linux.zip
   - PATH=${PATH}:${PWD}
+  - python3.6 -m grpc_tools.protoc --python_out cusim/ --proto_path cusim/proto/ config.proto
 
 script:
   - python3.6 setup.py install
