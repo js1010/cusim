@@ -11,14 +11,14 @@ matrix:
       env:
       - CUDA=8.0.61-1
       - CUDA_SHORT=8.0
-      - UBUNTU_VERSION=ubuntu1604
-      dist: xenial
+      - UBUNTU_VERSION=ubuntu1804
+      dist: bionic
     - name: CUDA 9
       env:
       - CUDA=9.2.148-1
       - CUDA_SHORT=9.2
-      - UBUNTU_VERSION=ubuntu1604
-      dist: xenial
+      - UBUNTU_VERSION=ubuntu1804
+      dist: bionic
     - name: CUDA 10
       env:
       - CUDA=10.1.105-1
