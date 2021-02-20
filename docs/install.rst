@@ -1,3 +1,6 @@
+Installation
+============
+
 install from pypi
 -----------------
 
