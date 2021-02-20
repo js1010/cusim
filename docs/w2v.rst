@@ -2,7 +2,27 @@ Word2Vec
 ========
 
 
+Parameters
+==========
+
+.. autoclass:: cusim.cuw2v.pycuw2v.CuW2V
+   :members:
+   :inherited-members:
+
+
+Example Codes
+=============
+
 - Full source code is in `github <https://github.com/js1010/cusim/blob/e29deb0a0a39a4b739aa1bc38ea9de897a8de8de/examples/example_w2v.py>`_
+
+- before running example codes, run 
+
+.. code-block:: shell
+
+  pip install -r examples/requirements.txt
+
+
+
 
 Download and preprocess data
 ----------------------------
@@ -14,8 +34,6 @@ Download and preprocess data
 
   import nltk
   from nltk.tokenize import RegexpTokenizer
-
-  from cusim import aux
   
   DOWNLOAD_PATH = "./res"
   DATASET = "quora-duplicate-questions"
