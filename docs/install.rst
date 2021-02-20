@@ -1,7 +1,7 @@
 Installation
 ============
 
-install from pypi
+Install from pypi
 -----------------
 
 .. code-block:: shell
@@ -9,7 +9,7 @@ install from pypi
   pip install cusim
 
 
-install from source
+Install from source
 --------------------
 
 .. code-block:: shell
